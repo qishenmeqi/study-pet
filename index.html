@@ -377,6 +377,19 @@
   .summary-line b.points{ color:var(--accent); }
 
   .edit-row{ display:flex; gap:9px; align-items:center; margin-bottom:10px; }
+  .edit-item{ margin-bottom:14px; }
+  .edit-item .edit-row{ margin-bottom:8px; }
+  .day-picker{ display:flex; gap:6px; flex-wrap:wrap; padding-left:2px; }
+  .day-chip{
+    height:34px; min-width:38px; padding:0 10px; border-radius:10px;
+    font-size:13px; font-weight:700; background:#F7EFE6; color:var(--ink-3);
+    transition:background .2s, color .2s;
+  }
+  .day-chip.on{ background:var(--accent); color:#fff; box-shadow:0 2px 6px rgba(255,138,91,.3); }
+  .task-days{
+    flex:0 0 auto; font-size:11px; font-weight:700; color:var(--ink-3);
+    background:#F3EAE0; padding:3px 7px; border-radius:8px; margin-right:2px;
+  }
   .edit-row .emoji-input{ width:56px; text-align:center; padding:10px 6px; }
   .edit-row .name-input{ flex:1; min-width:0; }
   .edit-row .del{
@@ -965,8 +978,8 @@ function defaultTasks() {
       { id: 'c4', subject: '其他', name: '其他作业', emoji: '📘' }
     ],
     extra: [
-      { id: 'e1', name: '课外英语', emoji: '🗣️', fixed: true, mode: 'repeat' },
-      { id: 'e2', name: '搏击课', emoji: '🥊', fixed: true, mode: 'repeat' }
+      { id: 'e1', name: '课外英语', emoji: '🗣️', mode: 'repeat' },
+      { id: 'e2', name: '搏击课', emoji: '🥊', mode: 'repeat' }
     ]
   };
 }
@@ -1271,10 +1284,15 @@ function campusScore(rec) {
   return Math.round(CAMPUS_POINTS * done / total);
 }
 
-/* 某一天有哪些课外项目：循环固定 + 当天新增 */
+/* 星期几：0=周日 … 6=周六 */
+function weekdayOf(k) { return parseKey(k).getDay(); }
+
+/* 某一天有哪些课外项目：循环固定（按星期筛选）+ 当天新增 */
 function extraItemsForDate(date) {
+  var wd = weekdayOf(date);
   return state.tasks.extra.filter(function (t) {
     if (t.mode === 'daily') return t.createdOn === date;
+    if (t.days && t.days.length && t.days.indexOf(wd) < 0) return false;
     return true;
   });
 }
@@ -1718,23 +1736,112 @@ function renderCampus() {
     + (state.tasks.campus.length ? Math.round(CAMPUS_POINTS / state.tasks.campus.length) : 0) + ' 点）。';
 }
 
+var DAY_OPTS = [['每天', null], ['一', 1], ['二', 2], ['三', 3], ['四', 4], ['五', 5], ['六', 6], ['日', 0]];
+
+function dayLabel(days) {
+  var order = [1, 2, 3, 4, 5, 6, 0];
+  var names = { 1: '一', 2: '二', 3: '三', 4: '四', 5: '五', 6: '六', 0: '日' };
+  return order.filter(function (d) { return days.indexOf(d) >= 0; })
+    .map(function (d) { return names[d]; }).join('·');
+}
+
+function deleteExtra(t) {
+  state.tasks.extra = state.tasks.extra.filter(function (x) { return x.id !== t.id; });
+  save();
+  renderExtra();
+  renderTotals();
+}
+
+function extraEditRow(t) {
+  var wrap = document.createElement('div');
+  wrap.className = 'edit-item';
+
+  var row = document.createElement('div');
+  row.className = 'edit-row';
+
+  var emoji = document.createElement('input');
+  emoji.className = 'text-input emoji-input';
+  emoji.type = 'text';
+  emoji.value = t.emoji || '';
+  emoji.maxLength = 4;
+  emoji.addEventListener('input', function () { t.emoji = emoji.value; save(); });
+
+  var name = document.createElement('input');
+  name.className = 'text-input name-input';
+  name.type = 'text';
+  name.value = t.name;
+  name.maxLength = 20;
+  name.addEventListener('input', function () { t.name = name.value; save(); renderTotals(); });
+
+  var del = document.createElement('button');
+  del.className = 'del';
+  del.type = 'button';
+  del.textContent = '✕';
+  del.addEventListener('click', function () { deleteExtra(t); });
+
+  row.appendChild(emoji);
+  row.appendChild(name);
+  row.appendChild(del);
+  wrap.appendChild(row);
+
+  var picker = document.createElement('div');
+  picker.className = 'day-picker';
+
+  DAY_OPTS.forEach(function (opt) {
+    var label = opt[0], val = opt[1];
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'day-chip';
+
+    var active = (val === null)
+      ? (!t.days || !t.days.length)
+      : (!!t.days && t.days.indexOf(val) >= 0);
+    if (active) b.classList.add('on');
+
+    b.textContent = label;
+    b.addEventListener('click', function () {
+      if (val === null) {
+        t.days = [];
+      } else {
+        if (!t.days) t.days = [];
+        var i = t.days.indexOf(val);
+        if (i >= 0) t.days.splice(i, 1);
+        else t.days.push(val);
+        if (!t.days.length) t.days = [];
+      }
+      save();
+      renderExtra();
+    });
+    picker.appendChild(b);
+  });
+
+  wrap.appendChild(picker);
+  return wrap;
+}
+
 function renderExtra() {
   var rec = dayRec();
   var date = todayKey();
+  var wd = weekdayOf(date);
   var list = $('#extraList');
   var editing = editMode.extra;
   list.innerHTML = '';
 
-  var repeats = state.tasks.extra.filter(function (t) { return t.mode !== 'daily'; });
+  var allRepeat = state.tasks.extra.filter(function (t) { return t.mode !== 'daily'; });
+  var todayRepeat = allRepeat.filter(function (t) {
+    return !t.days || !t.days.length || t.days.indexOf(wd) >= 0;
+  });
   var dailies = state.tasks.extra.filter(function (t) { return t.mode === 'daily' && t.createdOn === date; });
-  var visible = repeats.concat(dailies);
+
+  var shownRepeat = editing ? allRepeat : todayRepeat;
+  var visible = shownRepeat.concat(dailies);
 
   var doneCount = visible.filter(function (t) { return !!rec.extra[t.id]; }).length;
   $('#extraSummary').textContent = doneCount + ' / ' + visible.length + ' 完成';
   $('#extraPoints').textContent = extraScore(rec, date) + ' 点';
   $('#extraEditBtn').textContent = editing ? '完成' : '编辑';
 
-  [['循环固定', repeats, 'repeat'], ['今日新增', dailies, 'daily']].forEach(function (group) {
+  [['循环固定', shownRepeat, 'repeat'], ['今日新增', dailies, 'daily']].forEach(function (group) {
     var title = group[0], items = group[1], mode = group[2];
 
     var head = document.createElement('div');
@@ -1762,21 +1869,28 @@ function renderExtra() {
     if (!items.length) {
       var empty = document.createElement('li');
       empty.className = 'empty';
-      empty.textContent = mode === 'daily' ? '今天还没有新增项目' : '没有项目';
+      empty.textContent = mode === 'daily' ? '今天还没有新增项目' : '今天没有安排';
       list.appendChild(empty);
       return;
     }
 
     items.forEach(function (t) {
       if (editing) {
-        list.appendChild(editRow(t, null, function () {
-          state.tasks.extra = state.tasks.extra.filter(function (x) { return x.id !== t.id; });
-          save(); renderExtra(); renderTotals();
-        }, !!t.fixed));
+        list.appendChild(mode === 'repeat'
+          ? extraEditRow(t)
+          : editRow(t, null, function () { deleteExtra(t); }, false));
       } else {
-        list.appendChild(taskRow(t, !!rec.extra[t.id], function () {
+        var li = taskRow(t, !!rec.extra[t.id], function () {
           toggleTask('extra', t.id);
-        }, false, null, !!t.fixed));
+        }, false, null, false);
+
+        if (t.days && t.days.length) {
+          var chip = document.createElement('span');
+          chip.className = 'task-days';
+          chip.textContent = dayLabel(t.days);
+          li.insertBefore(chip, li.querySelector('.check'));
+        }
+        list.appendChild(li);
       }
     });
   });
