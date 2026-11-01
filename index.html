@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, minimum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>学习宠物</title>
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-title" content="学习宠物" />
@@ -24,9 +24,9 @@
     --radius:22px;
   }
   *{ box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-  html{ height:100%; }
+  html{ height:100%; overflow:hidden; touch-action:manipulation; }
   body{
-    margin:0; height:100%;
+    margin:0; height:100%; overflow:hidden; touch-action:manipulation;
     font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Hiragino Sans GB","Noto Sans SC","Microsoft YaHei",sans-serif;
     color:var(--ink);
     background:radial-gradient(120% 70% at 50% 0%, var(--bg-1) 0%, var(--bg-2) 100%) fixed;
@@ -37,6 +37,7 @@
   button{ font:inherit; color:inherit; border:0; background:none; cursor:pointer; touch-action:manipulation; }
   input, select, textarea{ font:inherit; color:inherit; touch-action:manipulation; }
   ul{ list-style:none; margin:0; padding:0; }
+  li{ list-style:none; }
   h2,h3{ margin:0; }
 
   .app{
@@ -65,13 +66,13 @@
 
   /* ---------- 模块导航 ---------- */
   .modnav{
-    flex:0 0 auto; display:grid; grid-template-columns:repeat(5,1fr);
-    gap:4px; margin:0 18px 8px; padding:4px;
+    flex:0 0 auto; display:grid; grid-template-columns:repeat(6,1fr);
+    gap:3px; margin:0 18px 8px; padding:4px;
     background:rgba(255,255,255,.62); border-radius:18px;
     box-shadow:0 2px 10px rgba(180,130,95,.08);
   }
   .mod{
-    padding:9px 2px; border-radius:14px; font-size:15px; font-weight:700;
+    padding:9px 1px; border-radius:14px; font-size:14px; font-weight:700;
     color:var(--ink-3); transition:background .22s, color .22s, box-shadow .22s;
   }
   .mod.on{ background:#fff; color:var(--accent); box-shadow:0 3px 10px rgba(180,130,95,.16); }
@@ -115,7 +116,10 @@
   .bubble.pop{ animation:pop .35s cubic-bezier(.34,1.56,.64,1); }
   @keyframes pop{ 0%{ transform:scale(.9); } 100%{ transform:scale(1); } }
 
-  .pet-area{ position:relative; display:grid; place-items:center; height:250px; margin-top:4px; }
+  .pet-area{
+    position:relative; display:grid; place-items:center; height:250px; margin-top:4px;
+    touch-action:pan-y;   /* 在宠物上拖动不会把页面横向滑走 */
+  }
 
   .pet{
     position:relative; width:240px; height:250px; --s:1; cursor:pointer;
@@ -136,28 +140,33 @@
   .pet.has-img .fish-bubble{ display:none; }
 
   /* 上传的图片也动起来 */
-  .pet.has-img[data-mood="happy"]  .pet-img{ animation:imgHappy 1.9s ease-in-out infinite; }
-  .pet.has-img[data-mood="need"]   .pet-img{ animation:imgBob 3s ease-in-out infinite; }
-  .pet.has-img[data-mood="hungry"] .pet-img{ animation:imgSad 3.8s ease-in-out infinite; }
-  .pet.has-img[data-mood="sick"]   .pet-img{ animation:imgShiver 2.3s ease-in-out infinite; }
+  .pet.has-img[data-mood="happy"]  .pet-img{ animation:imgHappy 1.6s cubic-bezier(.4,0,.5,1) infinite; }
+  .pet.has-img[data-mood="need"]   .pet-img{ animation:imgBob 2.8s ease-in-out infinite; }
+  .pet.has-img[data-mood="hungry"] .pet-img{ animation:imgSad 3.2s ease-in-out infinite; }
+  .pet.has-img[data-mood="sick"]   .pet-img{ animation:imgShiver 1.6s ease-in-out infinite; }
 
   @keyframes imgHappy{
-    0%,100%{ transform:translateY(0) scale(1,1); }
-    45%{ transform:translateY(-10px) scale(.985,1.015); }
-    72%{ transform:translateY(0) scale(1.015,.985); }
+    0%,100%{ transform:translateY(0) scale(1,1) rotate(0); }
+    25%{ transform:translateY(-18px) scale(.94,1.08) rotate(-2deg); }
+    50%{ transform:translateY(0) scale(1.07,.93) rotate(0); }
+    70%{ transform:translateY(-8px) scale(.98,1.03) rotate(2deg); }
+    85%{ transform:translateY(0) scale(1.02,.98) rotate(0); }
   }
   @keyframes imgBob{
-    0%,100%{ transform:translateY(0) scale(1,1); }
-    50%{ transform:translateY(-6px) scale(1.006,.994); }
+    0%,100%{ transform:translateY(0) rotate(-2deg) scale(1,1); }
+    50%{ transform:translateY(-11px) rotate(2deg) scale(1.02,.99); }
   }
   @keyframes imgSad{
-    0%,100%{ transform:translateY(0) rotate(0); }
-    50%{ transform:translateY(5px) rotate(-.5deg); }
+    0%,100%{ transform:translateY(4px) rotate(-1.5deg) scale(1,.99); }
+    50%{ transform:translateY(11px) rotate(1.5deg) scale(1.01,.97); }
   }
   @keyframes imgShiver{
-    0%,100%{ transform:translateX(0) rotate(0); }
-    25%{ transform:translateX(-2.5px) rotate(-.7deg); }
-    75%{ transform:translateX(2.5px) rotate(.7deg); }
+    0%,100%{ transform:translateX(0) rotate(0) scale(1,1); }
+    15%{ transform:translateX(-5px) rotate(-1.5deg) scale(.99,1.01); }
+    30%{ transform:translateX(5px) rotate(1.5deg) scale(.99,1.01); }
+    45%{ transform:translateX(-4px) rotate(-1deg); }
+    60%{ transform:translateX(4px) rotate(1deg); }
+    75%{ transform:translateX(-2px) rotate(-.5deg); }
   }
 
   /* ---- 夜煞：状态切换 ---- */
@@ -300,7 +309,7 @@
   .bands .b4{ flex:10; }
 
   /* ---------- 今日概览 ---------- */
-  .today-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .today-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
   .tstat{
     text-align:center; background:#FFFBF6; border-radius:14px; padding:12px 4px;
     box-shadow:inset 0 0 0 2px rgba(255,214,178,.4);
@@ -424,10 +433,31 @@
   .log-list .r-time{ color:var(--ink-3); font-size:12px; font-weight:600; }
   .empty{ text-align:center; color:var(--ink-3); padding:20px 0; font-size:14px; }
 
+  /* ---------- 成绩 ---------- */
+  .grade-row{
+    display:flex; align-items:center; gap:12px; padding:13px 16px; border-radius:16px;
+    background:#FFFBF6; margin-bottom:9px;
+    box-shadow:inset 0 0 0 2px rgba(255,214,178,.45);
+  }
+  .grade-row.redeemed{ background:#F7F3EE; box-shadow:inset 0 0 0 2px rgba(200,185,170,.35); }
+  .grade-name{ flex:1; min-width:0; font-size:16px; font-weight:700; word-break:break-word; }
+  .grade-row.redeemed .grade-name{ color:var(--ink-3); }
+  .grade-score{
+    flex:0 0 auto; font-size:17px; font-weight:800; font-variant-numeric:tabular-nums;
+    color:var(--accent); min-width:56px; text-align:right;
+  }
+  .grade-row.redeemed .grade-score{ color:var(--ink-3); }
+  .grade-row .buy:disabled{ background:#EDE3DA; color:#B6A79C; box-shadow:none; }
+  .score-input{ width:88px; text-align:center; font-weight:700; }
+  .score-input:disabled{ background:#F3EDE7; color:var(--ink-3); }
+
   /* ---------- 设置 ---------- */
   .field{ display:flex; align-items:center; justify-content:space-between; gap:14px; padding:9px 0; }
   .field > label{ color:var(--ink-2); font-weight:600; font-size:15px; }
   #nameInput{ width:170px; text-align:right; }
+
+  /* 家长密码输入后显示为圆点 */
+  #pinInput, .modal-input{ -webkit-text-security:disc; text-security:disc; }
   .swatches{ display:flex; gap:10px; }
   .swatches button{
     width:38px; height:38px; border-radius:50%;
@@ -554,8 +584,9 @@
     <button class="mod on" data-i="0">宠物</button>
     <button class="mod" data-i="1">校园</button>
     <button class="mod" data-i="2">课外</button>
-    <button class="mod" data-i="3">奖励</button>
-    <button class="mod" data-i="4">设置</button>
+    <button class="mod" data-i="3">成绩</button>
+    <button class="mod" data-i="4">奖励</button>
+    <button class="mod" data-i="5">设置</button>
   </nav>
 
   <main class="deck" id="deck">
@@ -698,6 +729,7 @@
             <div class="tstat"><b id="tCampus">0/4</b><span>校园作业</span></div>
             <div class="tstat"><b id="tExtra">0/2</b><span>课外练习</span></div>
             <div class="tstat"><b id="tSleep">未打卡</b><span>睡觉</span></div>
+            <div class="tstat"><b id="tStreak">0</b><span>连续天数</span></div>
           </div>
           <div class="today-note" id="todayNote">今天还没开始</div>
         </div>
@@ -705,7 +737,7 @@
         <div class="card sleep-card">
           <div class="sleep-info">
             <div class="sleep-title">🌙 睡觉打卡</div>
-            <div class="sleep-sub" id="sleepSub">23:30 前打卡，不然饱食度 −20</div>
+            <div class="sleep-sub" id="sleepSub">23:30 前打卡；晚了扣 2 点经验，忘打扣 3 点</div>
           </div>
           <button class="btn primary sleep-btn" id="sleepBtn">打卡</button>
         </div>
@@ -713,7 +745,7 @@
         <div class="card" id="sickCard" style="display:none">
           <div class="sleep-info">
             <div class="sleep-title" style="color:#C4692F">🤒 生病中</div>
-            <div class="sleep-sub">连续 3 天饱食度 ≤60。每天额外 −10 经验，扣不够就从积分里补。</div>
+            <div class="sleep-sub">连续 3 天饱食度不到 60。每天额外 −10 经验，扣不够就从积分里补。把饱食度拉回 60 以上就会好。</div>
           </div>
         </div>
 
@@ -751,7 +783,21 @@
             <b class="points" id="extraPoints">0 点</b>
           </div>
           <div id="extraList"></div>
-          <p class="hint">每完成一项 +10 饱食度。课外英语和搏击课是固定项，不能删除。</p>
+          <p class="hint">每完成一项 +10 饱食度，总分封顶 100。循环固定的项目每天都有；今日新增的第二天自动消失。</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 4. 成绩 ================= -->
+    <section class="panel">
+      <div class="panel-inner">
+        <div class="card">
+          <div class="panel-head">
+            <h2>考试成绩</h2>
+            <button class="link" id="gradeEditBtn">编辑</button>
+          </div>
+          <p class="hint" style="margin:0 0 8px">98 分以上可兑 40 积分，90 分以上可兑 20 积分。每条成绩只能兑换一次，兑换后分数锁定。</p>
+          <div id="gradeList"></div>
         </div>
       </div>
     </section>
@@ -866,9 +912,16 @@ var EXP_MAX = 100;
 var EXP_PER_CONVERT = 50;
 var CAMPUS_POINTS = 60;
 var EXTRA_POINT = 10;
-var LATE_PENALTY = 20;
+var SLEEP_LATE_EXP = 2;    /* 23:30 后打卡、或凌晨补卡，扣多少经验 */
+var SLEEP_MISS_EXP = 3;    /* 整天没打卡，扣多少经验 */
 var SICK_PENALTY = 10;
 var SICK_AFTER = 3;
+var FULL_MAX = 100;
+var FULL_MIN = -100;
+var RESET_LINE = 60;
+var OVERNIGHT_UNTIL = 6;   /* 0:00–5:59 打卡睡觉算补昨晚 */
+var STREAK_BONUS_AT = 3;
+var STREAK_BONUS_CREDITS = 1;
 
 var SUBJECTS = ['语文', '数学', '英语', '其他'];
 
@@ -887,6 +940,16 @@ function parseKey(k) {
 function addDays(k, n) { var d = parseKey(k); d.setDate(d.getDate() + n); return dateKey(d); }
 function todayKey() { return dateKey(new Date()); }
 function nowHM() { var d = new Date(); return pad2(d.getHours()) + ':' + pad2(d.getMinutes()); }
+
+/* 这次睡觉打卡应该记在哪一天：凌晨算昨晚 */
+function sleepTargetDate() {
+  var now = new Date();
+  if (now.getHours() < OVERNIGHT_UNTIL) return addDays(todayKey(), -1);
+  return todayKey();
+}
+function isOvernightNow() {
+  return new Date().getHours() < OVERNIGHT_UNTIL;
+}
 function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
 function pick(a) { return a[Math.floor(Math.random() * a.length)]; }
 
@@ -902,8 +965,8 @@ function defaultTasks() {
       { id: 'c4', subject: '其他', name: '其他作业', emoji: '📘' }
     ],
     extra: [
-      { id: 'e1', name: '课外英语', emoji: '🗣️', fixed: true },
-      { id: 'e2', name: '搏击课', emoji: '🥊', fixed: true }
+      { id: 'e1', name: '课外英语', emoji: '🗣️', fixed: true, mode: 'repeat' },
+      { id: 'e2', name: '搏击课', emoji: '🥊', fixed: true, mode: 'repeat' }
     ]
   };
 }
@@ -914,7 +977,7 @@ function defaultRewards() {
     { id: 'r2', name: '奖品自选券',   emoji: '🎁', cost: 50,  needConfirm: false },
     { id: 'r3', name: '户外体验券',   emoji: '⛰️', cost: 40,  needConfirm: true },
     { id: 'r4', name: '旅行兑换券',   emoji: '✈️', cost: 150, needConfirm: true },
-    { id: 'r5', name: '免搏击课一次', emoji: '🥊', cost: 50,  needConfirm: true },
+    { id: 'r5', name: '免搏击课一次', emoji: '🥊', cost: 65,  needConfirm: true },
     { id: 'r6', name: '点餐券',       emoji: '🍜', cost: 40,  needConfirm: false },
     { id: 'r7', name: '零花钱兑换',   emoji: '💰', cost: 10,  needConfirm: true, type: 'cash' }
   ];
@@ -922,17 +985,20 @@ function defaultRewards() {
 
 function makeState() {
   return {
-    v: 2,
+    v: 3,
     pet: { name: '无牙仔', color: 'night' },
     exp: 0,
     credits: 0,
     lowStreak: 0,
     sick: false,
-    lastSettled: addDays(todayKey(), -1),
+    base: 0,
+    baseDate: todayKey(),
     days: {},
     tasks: defaultTasks(),
+    grades: [],
     rewards: defaultRewards(),
     redemptions: [],
+    streakRewarded: false,
     settings: { bedtime: '23:30', pin: '' }
   };
 }
@@ -947,24 +1013,34 @@ function load() {
     var raw = localStorage.getItem(KEY);
     if (raw) {
       var s = JSON.parse(raw);
-      var base = makeState();
+      var def = makeState();
       state = {
-        v: 2,
-        pet: Object.assign(base.pet, s.pet || {}),
+        v: 3,
+        pet: Object.assign(def.pet, s.pet || {}),
         exp: typeof s.exp === 'number' ? s.exp : 0,
         credits: typeof s.credits === 'number' ? s.credits : 0,
         lowStreak: s.lowStreak || 0,
         sick: !!s.sick,
-        lastSettled: s.lastSettled || base.lastSettled,
+        base: typeof s.base === 'number' ? s.base : 0,
+        baseDate: s.baseDate || todayKey(),
         days: s.days || {},
         tasks: {
-          campus: (s.tasks && Array.isArray(s.tasks.campus) && s.tasks.campus.length) ? s.tasks.campus : base.tasks.campus,
-          extra: (s.tasks && Array.isArray(s.tasks.extra)) ? s.tasks.extra : base.tasks.extra
+          campus: (s.tasks && Array.isArray(s.tasks.campus) && s.tasks.campus.length) ? s.tasks.campus : def.tasks.campus,
+          extra: (s.tasks && Array.isArray(s.tasks.extra)) ? s.tasks.extra : def.tasks.extra
         },
-        rewards: (Array.isArray(s.rewards) && s.rewards.length) ? s.rewards : base.rewards,
+        grades: Array.isArray(s.grades) ? s.grades : [],
+        rewards: (Array.isArray(s.rewards) && s.rewards.length) ? s.rewards : def.rewards,
         redemptions: s.redemptions || [],
-        settings: Object.assign(base.settings, s.settings || {})
+        streakRewarded: !!s.streakRewarded,
+        settings: Object.assign(def.settings, s.settings || {})
       };
+
+      /* 旧数据迁移 */
+      state.tasks.extra.forEach(function (t) {
+        if (t.mode !== 'daily' && t.mode !== 'repeat') t.mode = 'repeat';
+      });
+      state.rewards.forEach(function (r) { if (r.id === 'r5') r.cost = 65; });
+      if (state.baseDate > todayKey()) state.baseDate = todayKey();
       if (['night', 'ocean', 'violet', 'forest', 'ember'].indexOf(state.pet.color) < 0) {
         state.pet.color = 'night';
       }
@@ -1195,37 +1271,59 @@ function campusScore(rec) {
   return Math.round(CAMPUS_POINTS * done / total);
 }
 
-function extraScore(rec) {
-  var done = state.tasks.extra.filter(function (t) { return !!rec.extra[t.id]; }).length;
+/* 某一天有哪些课外项目：循环固定 + 当天新增 */
+function extraItemsForDate(date) {
+  return state.tasks.extra.filter(function (t) {
+    if (t.mode === 'daily') return t.createdOn === date;
+    return true;
+  });
+}
+
+function extraScore(rec, date) {
+  var items = extraItemsForDate(date || todayKey());
+  var done = items.filter(function (t) { return !!rec.extra[t.id]; }).length;
   return done * EXTRA_POINT;
 }
 
-function baseFullness(rec) {
-  return clamp(campusScore(rec) + extraScore(rec), 0, 100);
-}
-
-/* 今天显示的饱食度：已打卡才扣迟到分 */
+/* 今天显示的饱食度：还没打卡睡觉时不扣迟到分 */
 function liveFullness() {
   var rec = dayRec();
-  var f = baseFullness(rec);
-  if (rec.sleep && rec.sleep.late) f = Math.max(0, f - LATE_PENALTY);
-  return f;
-}
-
-/* 结算用：没打卡睡觉也算没按时 */
-function finalFullness(date) {
-  var rec = dayRec(date);
-  var f = baseFullness(rec);
-  var late = !rec.sleep || rec.sleep.late;
-  if (late) f = Math.max(0, f - LATE_PENALTY);
-  return f;
+  return clamp(state.base + campusScore(rec) + extraScore(rec), FULL_MIN, FULL_MAX);
 }
 
 function bandOf(f) {
-  if (f <= 60) return { key: 'low',   delta: -5 };
+  if (f < RESET_LINE) return { key: 'low',   delta: -5 };
   if (f <= 80) return { key: 'ok',    delta: 0 };
   if (f <= 89) return { key: 'good',  delta: 1 };
   return { key: 'great', delta: 5 };
+}
+
+/* 某一天是否全部完成 */
+function dayComplete(date) {
+  var rec = state.days[date];
+  if (!rec) return false;
+  var campusOk = state.tasks.campus.length > 0 &&
+    state.tasks.campus.every(function (t) { return !!rec.campus[t.id]; });
+  var items = extraItemsForDate(date);
+  var extraOk = items.every(function (t) { return !!rec.extra[t.id]; });
+  return campusOk && extraOk;
+}
+
+/* 截止到某一天为止，连续完成了几天 */
+function streakEndingAt(date) {
+  var n = 0, k = date, guard = 0;
+  while (dayComplete(k) && guard++ < 2000) {
+    n++;
+    k = addDays(k, -1);
+  }
+  return n;
+}
+
+/* 界面上显示的连续天数（今天没完成就从昨天往前数） */
+function computeStreak() {
+  var k = todayKey();
+  if (!dayComplete(k)) k = addDays(k, -1);
+  return streakEndingAt(k);
 }
 
 /* =========================================================
@@ -1262,26 +1360,38 @@ function convertExp() {
 function settle() {
   var today = todayKey();
   var yest = addDays(today, -1);
-  if (state.lastSettled > yest) state.lastSettled = yest;
-
-  var d = addDays(state.lastSettled, 1);
+  var holdYesterday = isOvernightNow();
   var guard = 0;
-  while (d <= yest && guard++ < 400) {
-    settleDay(d);
-    state.lastSettled = d;
-    d = addDays(d, 1);
+
+  while (state.baseDate < today && guard++ < 400) {
+    /* 凌晨 6 点前先不结算昨天，等用户补睡觉卡 */
+    if (holdYesterday && state.baseDate === yest) break;
+    settleDay(state.baseDate);
+    state.baseDate = addDays(state.baseDate, 1);
   }
 
   var cutoff = addDays(today, -400);
   Object.keys(state.days).forEach(function (k) { if (k < cutoff) delete state.days[k]; });
+
+  /* 清理很久以前的「今日新增」项目 */
+  var keep = addDays(today, -120);
+  state.tasks.extra = state.tasks.extra.filter(function (t) {
+    return t.mode !== 'daily' || !t.createdOn || t.createdOn >= keep;
+  });
 }
 
 function settleDay(date) {
-  var f = finalFullness(date);
-  var band = bandOf(f);
-  applyExp(band.delta);
+  var rec = dayRec(date);
+  var earned = campusScore(rec) + extraScore(rec, date);
+  var f = clamp(state.base + earned, FULL_MIN, FULL_MAX);
+  rec.final = f;
 
-  if (f <= 60) {
+  applyExp(bandOf(f).delta);
+
+  /* 整天没打睡觉卡 */
+  if (!rec.sleep) applyExp(-SLEEP_MISS_EXP);
+
+  if (f < RESET_LINE) {
     state.lowStreak++;
   } else {
     state.lowStreak = 0;
@@ -1292,6 +1402,19 @@ function settleDay(date) {
   if (state.sick) applyExp(-SICK_PENALTY);
 
   convertExp();
+
+  /* 连续打卡奖励：达到 3 天给一次，断签后可再得 */
+  var st = streakEndingAt(date);
+  if (st === 0) {
+    state.streakRewarded = false;
+  } else if (st >= STREAK_BONUS_AT && !state.streakRewarded) {
+    state.credits += STREAK_BONUS_CREDITS;
+    state.streakRewarded = true;
+    rec.streakBonus = STREAK_BONUS_CREDITS;
+  }
+
+  /* 结转：≥60 第二天清零，否则带着走 */
+  state.base = (f >= RESET_LINE) ? 0 : f;
 }
 
 /* =========================================================
@@ -1323,7 +1446,7 @@ function idleBubble(mood) {
 function hasUnfinished() {
   var rec = dayRec();
   var c = state.tasks.campus.some(function (t) { return !rec.campus[t.id]; });
-  var e = state.tasks.extra.some(function (t) { return !rec.extra[t.id]; });
+  var e = extraItemsForDate(todayKey()).some(function (t) { return !rec.extra[t.id]; });
   return c || e;
 }
 
@@ -1361,24 +1484,32 @@ function renderPet() {
 
   $('#fullnessVal').textContent = f;
   var bar = $('#fullnessBar');
-  bar.style.width = f + '%';
+  bar.style.width = Math.max(0, f) + '%';
   bar.dataset.band = band.key;
 
   $('#expVal').textContent = state.exp + '/' + EXP_MAX;
   $('#expBar').style.width = (state.exp / EXP_MAX * 100) + '%';
 
   /* 今日概览 */
+  var visExtra = extraItemsForDate(todayKey());
   var cDone = state.tasks.campus.filter(function (t) { return !!rec.campus[t.id]; }).length;
-  var eDone = state.tasks.extra.filter(function (t) { return !!rec.extra[t.id]; }).length;
+  var eDone = visExtra.filter(function (t) { return !!rec.extra[t.id]; }).length;
   $('#tCampus').textContent = cDone + '/' + state.tasks.campus.length;
-  $('#tExtra').textContent = eDone + '/' + state.tasks.extra.length;
-  $('#tSleep').textContent = rec.sleep ? (rec.sleep.late ? '迟到' : '已打卡') : '未打卡';
+  $('#tExtra').textContent = eDone + '/' + visExtra.length;
+  var tSrec = state.days[sleepTargetDate()];
+  $('#tSleep').textContent = (tSrec && tSrec.sleep)
+    ? (tSrec.sleep.overnight ? '补卡' : (tSrec.sleep.late ? '迟到' : '已打卡'))
+    : '未打卡';
+  $('#tStreak').textContent = computeStreak();
 
   var dlt = band.delta;
   var dTxt = dlt > 0 ? '+' + dlt : (dlt === 0 ? '±0' : String(dlt));
-  $('#todayNote').textContent = rec.sleep
-    ? '饱食度 ' + f + ' → 明天零点 ' + dTxt + ' 经验'
-    : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡';
+  var carryTxt = '';
+  if (state.base < 0) carryTxt = ' ｜ 昨天没吃够，今天从 ' + state.base + ' 开始';
+  else if (state.base > 0) carryTxt = ' ｜ 接着昨天的 ' + state.base + ' 算';
+  $('#todayNote').textContent = (rec.sleep
+    ? '饱食度 ' + f + ' → 今晚结算 ' + dTxt + ' 经验'
+    : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡') + carryTxt;
 
   if (Date.now() > bubbleLock) {
     $('#bubble').textContent = idleBubble(mood);
@@ -1388,29 +1519,40 @@ function renderPet() {
   var sub = $('#sleepSub');
   var btn = $('#sleepBtn');
   var bedtime = state.settings.bedtime;
+  var sleepDate = sleepTargetDate();
+  var overnightNow = sleepDate !== todayKey();
+  var srec = state.days[sleepDate];
 
-  if (rec.sleep) {
+  if (srec && srec.sleep) {
     btn.disabled = true;
     btn.textContent = '已打卡';
-    sub.classList.remove('warn');
-    if (rec.sleep.late) {
-      sub.classList.remove('done');
+    sub.classList.remove('warn', 'done');
+    if (srec.sleep.overnight) {
       sub.classList.add('warn');
-      sub.textContent = '今天 ' + rec.sleep.time + ' 才打卡，超过 ' + bedtime + '，饱食度 −' + LATE_PENALTY;
+      sub.textContent = '这次 ' + srec.sleep.time + ' 才睡，算补昨晚的卡，扣 ' + SLEEP_LATE_EXP + ' 点经验';
+    } else if (srec.sleep.late) {
+      sub.classList.add('warn');
+      sub.textContent = '这次 ' + srec.sleep.time + ' 才打卡，超过 ' + bedtime + '，扣 ' + SLEEP_LATE_EXP + ' 点经验';
     } else {
       sub.classList.add('done');
-      sub.textContent = '今天 ' + rec.sleep.time + ' 打卡，准时 ✓';
+      sub.textContent = '这次 ' + srec.sleep.time + ' 打卡，准时 ✓';
     }
+  } else if (overnightNow) {
+    btn.disabled = false;
+    btn.textContent = '补卡';
+    sub.classList.remove('done');
+    sub.classList.add('warn');
+    sub.textContent = '已经过了 0 点，现在打卡算补昨晚的，扣 ' + SLEEP_LATE_EXP + ' 点经验';
   } else {
     btn.disabled = false;
     btn.textContent = nowHM() > bedtime ? '补卡' : '打卡';
     sub.classList.remove('done');
     if (nowHM() > bedtime) {
       sub.classList.add('warn');
-      sub.textContent = '已经过了 ' + bedtime + '，现在打卡会扣 ' + LATE_PENALTY + ' 点饱食度';
+      sub.textContent = '已经过了 ' + bedtime + '，现在打卡扣 ' + SLEEP_LATE_EXP + ' 点经验';
     } else {
       sub.classList.remove('warn');
-      sub.textContent = bedtime + ' 前打卡，不然饱食度 −' + LATE_PENALTY;
+      sub.textContent = bedtime + ' 前打卡；晚了扣 ' + SLEEP_LATE_EXP + ' 点，忘打扣 ' + SLEEP_MISS_EXP + ' 点经验';
     }
   }
 
@@ -1420,7 +1562,7 @@ function renderPet() {
 /* =========================================================
    渲染：校园 / 课外
    ========================================================= */
-var editMode = { campus: false, extra: false };
+var editMode = { campus: false, extra: false, grade: false };
 
 function taskRow(t, done, onToggle, editing, onDelete, locked) {
   var li = document.createElement('li');
@@ -1578,50 +1720,277 @@ function renderCampus() {
 
 function renderExtra() {
   var rec = dayRec();
+  var date = todayKey();
   var list = $('#extraList');
   var editing = editMode.extra;
   list.innerHTML = '';
 
-  var doneCount = state.tasks.extra.filter(function (t) { return !!rec.extra[t.id]; }).length;
-  $('#extraSummary').textContent = doneCount + ' / ' + state.tasks.extra.length + ' 完成';
-  $('#extraPoints').textContent = extraScore(rec) + ' 点';
+  var repeats = state.tasks.extra.filter(function (t) { return t.mode !== 'daily'; });
+  var dailies = state.tasks.extra.filter(function (t) { return t.mode === 'daily' && t.createdOn === date; });
+  var visible = repeats.concat(dailies);
+
+  var doneCount = visible.filter(function (t) { return !!rec.extra[t.id]; }).length;
+  $('#extraSummary').textContent = doneCount + ' / ' + visible.length + ' 完成';
+  $('#extraPoints').textContent = extraScore(rec, date) + ' 点';
   $('#extraEditBtn').textContent = editing ? '完成' : '编辑';
 
-  if (editing) {
-    state.tasks.extra.forEach(function (t) {
-      list.appendChild(editRow(t, null, function () {
-        state.tasks.extra = state.tasks.extra.filter(function (x) { return x.id !== t.id; });
-        save(); renderExtra(); renderTotals();
-      }, !!t.fixed));
-    });
+  [['循环固定', repeats, 'repeat'], ['今日新增', dailies, 'daily']].forEach(function (group) {
+    var title = group[0], items = group[1], mode = group[2];
 
-    var add = document.createElement('button');
-    add.className = 'btn ghost block';
-    add.type = 'button';
-    add.textContent = '＋ 添加练习';
-    add.addEventListener('click', function () {
-      state.tasks.extra.push({ id: 'e' + Date.now().toString(36), name: '新练习', emoji: '🎯', fixed: false });
-      save(); renderExtra();
-      setTimeout(function () {
-        var inputs = $$('#extraList .name-input');
-        if (inputs.length) inputs[inputs.length - 1].focus();
-      }, 60);
-    });
-    list.appendChild(add);
-  } else {
-    state.tasks.extra.forEach(function (t) {
-      list.appendChild(taskRow(t, !!rec.extra[t.id], function () {
-        toggleTask('extra', t.id);
-      }, false, null, !!t.fixed));
-    });
+    var head = document.createElement('div');
+    head.className = 'subject-head';
+    var label = document.createElement('span');
+    label.textContent = title;
+    head.appendChild(label);
 
-    if (!state.tasks.extra.length) {
+    if (editing) {
+      var addBtn = document.createElement('button');
+      addBtn.className = 'add-mini';
+      addBtn.type = 'button';
+      addBtn.textContent = '＋';
+      addBtn.setAttribute('aria-label', '添加' + title);
+      addBtn.addEventListener('click', function () { addExtraTask(mode); });
+      head.appendChild(addBtn);
+    } else {
+      var cnt = document.createElement('span');
+      cnt.className = 'count';
+      cnt.textContent = items.filter(function (t) { return rec.extra[t.id]; }).length + '/' + items.length;
+      head.appendChild(cnt);
+    }
+    list.appendChild(head);
+
+    if (!items.length) {
       var empty = document.createElement('li');
       empty.className = 'empty';
-      empty.textContent = '还没有课外项目，点右上角「编辑」添加';
+      empty.textContent = mode === 'daily' ? '今天还没有新增项目' : '没有项目';
       list.appendChild(empty);
+      return;
+    }
+
+    items.forEach(function (t) {
+      if (editing) {
+        list.appendChild(editRow(t, null, function () {
+          state.tasks.extra = state.tasks.extra.filter(function (x) { return x.id !== t.id; });
+          save(); renderExtra(); renderTotals();
+        }, !!t.fixed));
+      } else {
+        list.appendChild(taskRow(t, !!rec.extra[t.id], function () {
+          toggleTask('extra', t.id);
+        }, false, null, !!t.fixed));
+      }
+    });
+  });
+}
+
+/* =========================================================
+   渲染：成绩
+   ========================================================= */
+function gradeValue(score) {
+  var n = Number(score);
+  if (!isFinite(n)) return 0;
+  if (n >= 98) return 40;
+  if (n >= 90) return 20;
+  return 0;
+}
+
+function addGrade(sub) {
+  state.grades.push({
+    id: 'g' + Date.now().toString(36) + Math.floor(Math.random() * 99),
+    subject: sub,
+    name: '新考试',
+    score: 0,
+    redeemed: false,
+    redeemedAt: ''
+  });
+  save();
+  renderGrades();
+  setTimeout(function () {
+    var inputs = $$('#gradeList .score-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 60);
+}
+
+function gradeRow(g) {
+  var li = document.createElement('li');
+  li.className = 'grade-row' + (g.redeemed ? ' redeemed' : '');
+
+  var name = document.createElement('span');
+  name.className = 'grade-name';
+  name.textContent = g.name;
+
+  var score = document.createElement('span');
+  score.className = 'grade-score';
+  score.textContent = (g.score === '' || g.score === null) ? '—' : g.score + ' 分';
+
+  var btn = document.createElement('button');
+  btn.className = 'buy';
+  btn.type = 'button';
+
+  if (g.redeemed) {
+    btn.textContent = '已兑换';
+    btn.disabled = true;
+  } else {
+    var val = gradeValue(g.score);
+    if (val > 0) {
+      btn.textContent = '兑 ' + val;
+      btn.addEventListener('click', function () { redeemGrade(g); });
+    } else {
+      btn.textContent = '不足 90';
+      btn.disabled = true;
     }
   }
+
+  li.appendChild(name);
+  li.appendChild(score);
+  li.appendChild(btn);
+  return li;
+}
+
+function gradeEditRow(g) {
+  var row = document.createElement('div');
+  row.className = 'edit-row';
+
+  var name = document.createElement('input');
+  name.className = 'text-input name-input';
+  name.type = 'text';
+  name.value = g.name;
+  name.maxLength = 20;
+  name.addEventListener('input', function () { g.name = name.value; save(); });
+
+  var score = document.createElement('input');
+  score.className = 'text-input score-input';
+  score.type = 'number';
+  score.min = '0';
+  score.max = '150';
+  score.placeholder = '分数';
+  score.value = (g.score > 0) ? g.score : '';
+  score.addEventListener('input', function () {
+    g.score = score.value === '' ? 0 : Number(score.value);
+    save();
+  });
+
+  if (g.redeemed) { name.disabled = true; score.disabled = true; }
+
+  row.appendChild(name);
+  row.appendChild(score);
+
+  if (g.redeemed) {
+    var lock = document.createElement('span');
+    lock.className = 'lock';
+    lock.textContent = '🔒';
+    row.appendChild(lock);
+  } else {
+    var del = document.createElement('button');
+    del.className = 'del';
+    del.type = 'button';
+    del.textContent = '✕';
+    del.addEventListener('click', function () {
+      state.grades = state.grades.filter(function (x) { return x.id !== g.id; });
+      save();
+      renderGrades();
+    });
+    row.appendChild(del);
+  }
+  return row;
+}
+
+function renderGrades() {
+  var list = $('#gradeList');
+  if (!list) return;
+  var editing = editMode.grade;
+  list.innerHTML = '';
+  $('#gradeEditBtn').textContent = editing ? '完成' : '编辑';
+
+  SUBJECTS.forEach(function (sub) {
+    var items = state.grades.filter(function (g) { return g.subject === sub; });
+
+    var head = document.createElement('div');
+    head.className = 'subject-head';
+    var label = document.createElement('span');
+    label.textContent = sub;
+    head.appendChild(label);
+
+    if (editing) {
+      var addBtn = document.createElement('button');
+      addBtn.className = 'add-mini';
+      addBtn.type = 'button';
+      addBtn.textContent = '＋';
+      addBtn.setAttribute('aria-label', '添加' + sub + '成绩');
+      addBtn.addEventListener('click', function () { addGrade(sub); });
+      head.appendChild(addBtn);
+    } else {
+      var cnt = document.createElement('span');
+      cnt.className = 'count';
+      cnt.textContent = items.length + ' 条';
+      head.appendChild(cnt);
+    }
+    list.appendChild(head);
+
+    if (!items.length) {
+      if (editing) {
+        var e1 = document.createElement('li');
+        e1.className = 'empty';
+        e1.textContent = '点 ＋ 添加一条成绩';
+        list.appendChild(e1);
+      }
+      return;
+    }
+
+    items.forEach(function (g) {
+      list.appendChild(editing ? gradeEditRow(g) : gradeRow(g));
+    });
+  });
+
+  if (!state.grades.length) {
+    var none = document.createElement('li');
+    none.className = 'empty';
+    none.textContent = '还没有成绩记录，点右上角「编辑」添加';
+    list.appendChild(none);
+  }
+}
+
+function redeemGrade(g) {
+  if (g.redeemed) return;
+  var val = gradeValue(g.score);
+  if (val <= 0) { toast('这条成绩不到 90 分'); return; }
+
+  function doIt() {
+    g.redeemed = true;
+    var d = new Date();
+    g.redeemedAt = (d.getMonth() + 1) + '月' + d.getDate() + '日';
+    state.credits += val;
+    state.redemptions.unshift({
+      id: 'gr' + Date.now().toString(36),
+      name: '成绩奖励 · ' + g.name + ' ' + g.score + '分',
+      cost: val,
+      gain: true,
+      at: g.redeemedAt
+    });
+    save();
+    render();
+    toast('成绩奖励 +' + val + ' 积分');
+  }
+
+  askConfirm('家长确认', '「' + g.name + '」' + g.score + ' 分，兑换 ' + val + ' 积分？', doIt);
+}
+
+function addExtraTask(mode) {
+  var t = {
+    id: 'e' + Date.now().toString(36) + Math.floor(Math.random() * 99),
+    name: mode === 'daily' ? '今日练习' : '新练习',
+    emoji: '🎯',
+    mode: mode,
+    fixed: false
+  };
+  if (mode === 'daily') t.createdOn = todayKey();
+  state.tasks.extra.push(t);
+  save();
+  renderExtra();
+  renderTotals();
+  setTimeout(function () {
+    var inputs = $$('#extraList .name-input');
+    if (inputs.length) inputs[inputs.length - 1].focus();
+  }, 60);
 }
 
 function addCampusTask(sub) {
@@ -1650,7 +2019,7 @@ function toggleTask(kind, id) {
   save();
   render();
 
-  if (map[id]) { spawnFood(); spawnHearts(2); }
+  if (map[id]) { spawnFood(); spawnHearts(1); }
 }
 
 /* =========================================================
@@ -1757,7 +2126,7 @@ function renderReward() {
     left.textContent = r.name;
     var right = document.createElement('span');
     right.className = 'r-time';
-    right.textContent = '−' + r.cost + ' 积分 · ' + (r.at || '');
+    right.textContent = (r.gain ? '+' : '−') + Math.abs(r.cost) + ' 积分 · ' + (r.at || '');
     li.appendChild(left);
     li.appendChild(right);
     log.appendChild(li);
@@ -1832,9 +2201,10 @@ function renderTotals() {
   $('#campusSummary').textContent = state.tasks.campus.filter(function (t) { return !!rec.campus[t.id]; }).length
     + ' / ' + state.tasks.campus.length + ' 完成';
   $('#campusPoints').textContent = campusScore(rec) + ' 点';
-  $('#extraSummary').textContent = state.tasks.extra.filter(function (t) { return !!rec.extra[t.id]; }).length
-    + ' / ' + state.tasks.extra.length + ' 完成';
-  $('#extraPoints').textContent = extraScore(rec) + ' 点';
+  var vis = extraItemsForDate(todayKey());
+  $('#extraSummary').textContent = vis.filter(function (t) { return !!rec.extra[t.id]; }).length
+    + ' / ' + vis.length + ' 完成';
+  $('#extraPoints').textContent = extraScore(rec, todayKey()) + ' 点';
   renderPet();
 }
 
@@ -1842,6 +2212,7 @@ function render() {
   renderPet();
   renderCampus();
   renderExtra();
+  renderGrades();
   renderReward();
   renderSettings();
 }
@@ -1943,29 +2314,52 @@ function bindEvents() {
     goTo(i, false);
   });
 
-  /* 戳宠物 */
+  /* 戳宠物：加冷却，避免连点刷出一堆小图标 */
+  var lastPetTap = 0;
   $('#pet').addEventListener('click', function () {
+    var now = Date.now();
     var el = $('#pet');
     el.classList.remove('tap');
     void el.offsetWidth;
     el.classList.add('tap');
-    setTimeout(function () { el.classList.remove('tap'); }, 400);
-    spawnHearts(2);
-    setBubble(pick(['嘿嘿，好痒～', '摸摸头！', '最喜欢你啦', '再摸一下嘛～']), 2500);
+    setTimeout(function () { el.classList.remove('tap'); }, 450);
+
+    if (now - lastPetTap > 700) {
+      lastPetTap = now;
+      spawnHearts(1);
+      setBubble(pick(['嘿嘿，好痒～', '摸摸头！', '最喜欢你啦', '再摸一下嘛～']), 2500);
+    }
   });
 
   /* 睡觉打卡 */
   $('#sleepBtn').addEventListener('click', function () {
-    var rec = dayRec();
-    if (rec.sleep) { toast('今天已经打过睡觉卡了'); return; }
+    var target = sleepTargetDate();
+    var overnight = target !== todayKey();
+    var rec = dayRec(target);
+
+    if (rec.sleep) { toast('这一觉已经打过卡了'); return; }
+
     var hm = nowHM();
+
+    if (overnight) {
+      rec.sleep = { time: hm, late: false, overnight: true };
+      applyExp(-SLEEP_LATE_EXP);
+      save();
+      render();
+      toast('已经过了 0 点，算补昨晚的卡，扣 ' + SLEEP_LATE_EXP + ' 点经验');
+      setBubble('这么晚才睡…我扣了一点精神', 5000);
+      return;
+    }
+
     var late = hm > (state.settings.bedtime || '23:30');
-    rec.sleep = { time: hm, late: late };
+    rec.sleep = { time: hm, late: late, overnight: false };
+    if (late) applyExp(-SLEEP_LATE_EXP);
     save();
     render();
+
     if (late) {
-      toast('超过 ' + state.settings.bedtime + ' 了，饱食度 −' + LATE_PENALTY);
-      setBubble('这么晚才睡…我有点撑不住了', 5000);
+      toast('超过 ' + state.settings.bedtime + ' 了，扣 ' + SLEEP_LATE_EXP + ' 点经验');
+      setBubble('这么晚才睡…我有点累', 5000);
     } else {
       toast('晚安打卡成功 🌙');
       setBubble('晚安～明天见！', 5000);
@@ -1982,6 +2376,10 @@ function bindEvents() {
   $('#extraEditBtn').addEventListener('click', function () {
     editMode.extra = !editMode.extra;
     renderExtra();
+  });
+  $('#gradeEditBtn').addEventListener('click', function () {
+    editMode.grade = !editMode.grade;
+    renderGrades();
   });
 
   /* 名字 */
@@ -2113,6 +2511,17 @@ function boot() {
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) { settle(); save(); render(); }
   });
+
+  /* 禁止双指缩放、双击放大 */
+  document.addEventListener('gesturestart', function (e) { e.preventDefault(); }, { passive: false });
+  document.addEventListener('gesturechange', function (e) { e.preventDefault(); }, { passive: false });
+  var lastTouchEnd = 0;
+  document.addEventListener('touchend', function (e) {
+    var now = Date.now();
+    if (now - lastTouchEnd <= 320) e.preventDefault();
+    lastTouchEnd = now;
+  }, { passive: false });
+  document.addEventListener('dblclick', function (e) { e.preventDefault(); }, { passive: false });
 
   if (navigator.storage && navigator.storage.persist) {
     navigator.storage.persist().catch(function () {});
