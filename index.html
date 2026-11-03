@@ -269,6 +269,60 @@
     background:#E1F0F2; border:3px solid #BCD9DD;
   }
 
+  /* ---- 蛋 ---- */
+  .egg-art{
+    display:none; width:120px; height:152px; position:relative;
+    border-radius:50% 50% 48% 48% / 60% 60% 40% 40%;
+    background:radial-gradient(circle at 35% 28%, #FFFBF2 0%, #F7E7CE 45%, #E6C9A4 100%);
+    box-shadow:inset -10px -12px 0 rgba(120,90,60,.06), 0 10px 22px rgba(150,105,70,.16);
+    transform:translateY(-6px);
+    animation:eggBob 3.4s ease-in-out infinite;
+  }
+  @keyframes eggBob{
+    0%,100%{ transform:translateY(-6px) rotate(-2deg); }
+    50%{ transform:translateY(-13px) rotate(2deg); }
+  }
+  .egg-spot{ position:absolute; border-radius:50%; background:rgba(150,120,85,.18); }
+  .egg-spot.a{ width:18px; height:14px; left:30px; top:46px; }
+  .egg-spot.b{ width:14px; height:11px; left:66px; top:72px; }
+  .egg-spot.c{ width:11px; height:9px; left:44px; top:96px; }
+  .egg-spot.d{ width:9px; height:7px; left:74px; top:34px; }
+
+  .pet[data-stage="egg"] .dragon,
+  .pet[data-stage="juvenile"] .dragon{ display:none; }
+  .pet[data-stage="egg"]:not(.has-img) .egg-art{ display:block; }
+  .pet.has-img .egg-art{ display:none; }
+
+  /* ---- 切换宠物 ---- */
+  .pet-arrow{
+    position:absolute; top:50%; transform:translateY(-50%);
+    width:40px; height:40px; border-radius:50%;
+    background:rgba(255,255,255,.86); color:var(--ink-2);
+    font-size:22px; line-height:1; box-shadow:0 2px 10px rgba(180,130,95,.18);
+    display:none; z-index:4;
+  }
+  .pet-arrow.left{ left:6px; }
+  .pet-arrow.right{ right:6px; }
+  .pet-arrow.show{ display:block; }
+  .pet-arrow:active{ transform:translateY(-50%) scale(.92); }
+
+  .pet-dots{ display:flex; justify-content:center; align-items:center; gap:7px; margin-top:2px; height:12px; }
+  .pet-dots i{ width:8px; height:8px; border-radius:50%; background:#E4D6C8; transition:all .2s; }
+  .pet-dots i.on{ background:var(--accent); width:20px; border-radius:4px; }
+  .pet-stage-line{
+    text-align:center; font-size:13px; font-weight:600; color:var(--ink-3);
+    margin:6px 0 2px; min-height:18px;
+  }
+
+  /* ---- 买蛋 / 回收 ---- */
+  .pet-manage .pm-row{ display:flex; align-items:center; gap:12px; padding:9px 0; }
+  .pet-manage .pm-row + .pm-row{ border-top:1.5px solid #F6EDE5; }
+  .pm-info{ flex:1; min-width:0; }
+  .pm-title{ font-size:15px; font-weight:700; }
+  .pm-sub{ font-size:12px; color:var(--ink-3); font-weight:600; margin-top:2px; }
+  .btn.small{ padding:9px 16px; font-size:14px; border-radius:12px; }
+  .btn.small:disabled{ background:#EDE3DA; color:#B6A79C; box-shadow:none; }
+
   .heart{ position:absolute; bottom:70px; font-size:26px; pointer-events:none; animation:floatUp 1.5s ease-out forwards; }
   @keyframes floatUp{
     0%{ transform:translateY(0) scale(.6); opacity:0; }
@@ -481,6 +535,13 @@
   .swatches button.on{ box-shadow:0 0 0 3px #fff, 0 0 0 5.5px var(--c2); transform:scale(1.06); }
 
   .upload-list{ margin-top:6px; }
+  .upl-pets{ display:flex; gap:8px; flex-wrap:wrap; margin:2px 0 10px; }
+  .upl-pet{
+    padding:7px 14px; border-radius:12px; font-size:13px; font-weight:700;
+    background:#F5EBE2; color:var(--ink-2); max-width:140px;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  .upl-pet.on{ background:var(--accent); color:#fff; }
   .upload-hint{ font-size:13px; font-weight:700; color:var(--accent); padding:4px 0 10px; }
   .upload-row{ display:flex; align-items:center; gap:12px; padding:9px 8px; border-bottom:1.5px solid #F6EDE5; }
   .upload-row:last-child{ border-bottom:0; }
@@ -612,7 +673,7 @@
           <div class="bubble" id="bubble">今天也要一起加油喔！</div>
 
           <div class="pet-area">
-            <div class="pet" id="pet" data-color="night">
+            <div class="pet" id="pet" data-color="night" data-stage="egg">
               <svg class="dragon" id="dragon" viewBox="0 0 240 250" xmlns="http://www.w3.org/2000/svg" data-mood="need">
                 <defs>
                   <linearGradient id="bodyG" x1="0" y1="0" x2="0" y2="1">
@@ -698,6 +759,13 @@
                   <path d="M186 152 q9 7 0 14" fill="none" stroke="#A9B7C4" stroke-width="3" stroke-linecap="round"/>
                 </g>
               </svg>
+              <div class="egg-art" id="eggArt">
+                <span class="egg-spot a"></span>
+                <span class="egg-spot b"></span>
+                <span class="egg-spot c"></span>
+                <span class="egg-spot d"></span>
+              </div>
+
               <img class="pet-img" id="petImg" alt="宠物图片">
 
               <div class="fish-bubble" id="fishBubble">
@@ -705,7 +773,13 @@
                 <span class="q">?</span>
               </div>
             </div>
+
+            <button class="pet-arrow left" id="petPrev" type="button" aria-label="上一只">‹</button>
+            <button class="pet-arrow right" id="petNext" type="button" aria-label="下一只">›</button>
           </div>
+
+          <div class="pet-dots" id="petDots"></div>
+          <div class="pet-stage-line" id="petStageLine"></div>
 
           <div class="meters">
             <div class="meter-row">
@@ -753,6 +827,23 @@
             <div class="sleep-sub" id="sleepSub">23:30 前打卡；晚了扣 2 点经验，忘打扣 3 点</div>
           </div>
           <button class="btn primary sleep-btn" id="sleepBtn">打卡</button>
+        </div>
+
+        <div class="card pet-manage">
+          <div class="pm-row">
+            <div class="pm-info">
+              <div class="pm-title" id="pmTitle">买一颗新蛋</div>
+              <div class="pm-sub" id="pmSub">第 2 颗蛋需要 20 积分</div>
+            </div>
+            <button class="btn primary small" id="buyEggBtn" type="button">买蛋</button>
+          </div>
+          <div class="pm-row" id="recycleRow" style="display:none">
+            <div class="pm-info">
+              <div class="pm-title">回收这只宠物</div>
+              <div class="pm-sub">退回 5 积分，腾出一个位置</div>
+            </div>
+            <button class="btn x" id="recycleBtn" type="button">回收</button>
+          </div>
         </div>
 
         <div class="card" id="sickCard" style="display:none">
@@ -859,9 +950,9 @@
 
         <div class="card">
           <h2 class="card-title">宠物形象</h2>
-          <p class="hint" style="margin-top:0">默认是夜煞。也可以给四种状态分别上传自己的图片，会替换掉对应表情。</p>
+          <p class="hint" style="margin-top:0">每只宠物单独设置：蛋一张；幼体 A / B 两张（<b>孵化时随机抽一张</b>）；成体后按四种状态各一张。</p>
           <div class="upload-list" id="uploadList"></div>
-          <button class="btn ghost block" id="clearPetImgs" style="margin-top:12px">恢复默认形象</button>
+          <button class="btn ghost block" id="clearPetImgs" style="margin-top:12px">清空这只的图片</button>
         </div>
 
         <div class="card">
@@ -996,15 +1087,38 @@ function defaultRewards() {
   ];
 }
 
+var MAX_PETS = 3;
+var EGG_COST = [
+  { exp: 5 },          /* 第 1 颗蛋 */
+  { credits: 20 },     /* 第 2 颗 */
+  { credits: 30 }      /* 第 3 颗 */
+];
+var RECYCLE_CREDITS = 5;
+var STAGE_NEED = { egg: 7, juvenile: 14 };   /* 当前阶段需要连续多少天 */
+
+function newPet(opts) {
+  opts = opts || {};
+  return {
+    id: opts.id || ('p' + Date.now().toString(36)),
+    name: opts.name || '无牙仔',
+    color: opts.color || 'night',
+    stage: 'egg',          /* egg | juvenile | adult */
+    growth: 0,             /* 当前阶段已连续达标天数 */
+    base: 0,               /* 当日结转的饱食度 */
+    first: !!opts.first    /* 第一只：按「作业全完成」成长 */
+  };
+}
+
 function makeState() {
   return {
-    v: 3,
-    pet: { name: '无牙仔', color: 'night' },
+    v: 4,
+    pets: [newPet({ id: 'p1', name: '无牙仔', first: true })],
+    petIndex: 0,
+    eggBought: 1,
     exp: 0,
     credits: 0,
     lowStreak: 0,
     sick: false,
-    base: 0,
     baseDate: todayKey(),
     days: {},
     tasks: defaultTasks(),
@@ -1014,6 +1128,12 @@ function makeState() {
     streakRewarded: false,
     settings: { bedtime: '23:30', pin: '' }
   };
+}
+
+function curPet() {
+  if (!state.pets || !state.pets.length) return null;
+  if (state.petIndex >= state.pets.length) state.petIndex = 0;
+  return state.pets[state.petIndex];
 }
 
 /* =========================================================
@@ -1028,13 +1148,14 @@ function load() {
       var s = JSON.parse(raw);
       var def = makeState();
       state = {
-        v: 3,
-        pet: Object.assign(def.pet, s.pet || {}),
+        v: 4,
+        pets: Array.isArray(s.pets) ? s.pets : null,
+        petIndex: s.petIndex || 0,
+        eggBought: typeof s.eggBought === 'number' ? s.eggBought : 1,
         exp: typeof s.exp === 'number' ? s.exp : 0,
         credits: typeof s.credits === 'number' ? s.credits : 0,
         lowStreak: s.lowStreak || 0,
         sick: !!s.sick,
-        base: typeof s.base === 'number' ? s.base : 0,
         baseDate: s.baseDate || todayKey(),
         days: s.days || {},
         tasks: {
@@ -1048,15 +1169,31 @@ function load() {
         settings: Object.assign(def.settings, s.settings || {})
       };
 
+      /* v3 → v4：单只宠物包成数组，从蛋重新开始 */
+      if (!state.pets || !state.pets.length) {
+        var p0 = newPet({ id: 'p1', name: (s.pet && s.pet.name) || '无牙仔', first: true });
+        p0.color = (s.pet && s.pet.color) || 'night';
+        p0.stage = 'egg';
+        p0.growth = 0;
+        p0.base = typeof s.base === 'number' ? s.base : 0;
+        state.pets = [p0];
+      }
+
+      state.pets.forEach(function (p) {
+        if (!p.id) p.id = 'p' + Math.random().toString(36).slice(2, 7);
+        if (['egg', 'juvenile', 'adult'].indexOf(p.stage) < 0) p.stage = 'egg';
+        if (typeof p.growth !== 'number') p.growth = 0;
+        if (typeof p.base !== 'number') p.base = 0;
+        if (['night', 'ocean', 'violet', 'forest', 'ember'].indexOf(p.color) < 0) p.color = 'night';
+      });
+      if (state.petIndex >= state.pets.length) state.petIndex = 0;
+
       /* 旧数据迁移 */
       state.tasks.extra.forEach(function (t) {
         if (t.mode !== 'daily' && t.mode !== 'repeat') t.mode = 'repeat';
       });
       state.rewards.forEach(function (r) { if (r.id === 'r5') r.cost = 65; });
       if (state.baseDate > todayKey()) state.baseDate = todayKey();
-      if (['night', 'ocean', 'violet', 'forest', 'ember'].indexOf(state.pet.color) < 0) {
-        state.pet.color = 'night';
-      }
       return;
     }
   } catch (e) { console.warn('读取存档失败', e); }
@@ -1071,30 +1208,119 @@ function save() {
 /* =========================================================
    自定义宠物图片
    ========================================================= */
-var IMG_KEY = 'study-pet-images';
+var IMG_KEY = 'study-pet-images-v2';
+var LEGACY_IMG_KEY = 'study-pet-images';
 var MOOD_ORDER = ['need', 'hungry', 'sick', 'happy'];
 var MOOD_LABEL = { need: '需要打卡', hungry: '饿了', sick: '生病', happy: '开心' };
+var IMG_KEYS = ['egg', 'juvenile', 'juvenile2', 'need', 'hungry', 'sick', 'happy'];
+var IMG_LABEL = {
+  egg: '蛋',
+  juvenile: '幼体 A',
+  juvenile2: '幼体 B',
+  need: '成体·打卡',
+  hungry: '成体·饿了',
+  sick: '成体·生病',
+  happy: '成体·开心'
+};
 
-function loadPetImages() {
-  try { return JSON.parse(localStorage.getItem(IMG_KEY)) || {}; }
-  catch (e) { return {}; }
+function loadAllImages() {
+  var all = {};
+  try { all = JSON.parse(localStorage.getItem(IMG_KEY)) || {}; } catch (e) { all = {}; }
+
+  /* 旧版只有一套图，迁给第一只宠物 */
+  try {
+    var legacy = JSON.parse(localStorage.getItem(LEGACY_IMG_KEY));
+    if (legacy && Object.keys(legacy).length) {
+      var pid = (state && state.pets && state.pets[0]) ? state.pets[0].id : 'p1';
+      all[pid] = Object.assign({}, legacy, all[pid] || {});
+      localStorage.setItem(IMG_KEY, JSON.stringify(all));
+      localStorage.removeItem(LEGACY_IMG_KEY);
+    }
+  } catch (e) {}
+
+  return all;
 }
 
-function savePetImages(obj) {
-  try { localStorage.setItem(IMG_KEY, JSON.stringify(obj)); return true; }
+function saveAllImages(all) {
+  try { localStorage.setItem(IMG_KEY, JSON.stringify(all)); return true; }
   catch (e) { console.warn(e); toast('图片太大，存不下了'); return false; }
 }
 
-function applyPetImage(mood) {
-  var src = loadPetImages()[mood];
-  var pet = $('#pet');
+function petImages(petId) {
+  return loadAllImages()[petId] || {};
+}
+
+function setPetImage(petId, key, url) {
+  var all = loadAllImages();
+  if (!all[petId]) all[petId] = {};
+  if (url) all[petId][key] = url;
+  else delete all[petId][key];
+  return saveAllImages(all);
+}
+
+function buyEgg() {
+  if (state.pets.length >= MAX_PETS) { toast('最多同时养 ' + MAX_PETS + ' 只'); return; }
+  var price = eggPrice();
+
+  if (price.exp && state.exp < price.exp) { toast('需要 ' + price.exp + ' 点经验'); return; }
+  if (price.credits && state.credits < price.credits) { toast('需要 ' + price.credits + ' 积分'); return; }
+
+  var costTxt = price.exp ? (price.exp + ' 点经验') : (price.credits + ' 积分');
+  if (!confirm('花 ' + costTxt + ' 买一颗新蛋？')) return;
+
+  if (price.exp) state.exp -= price.exp;
+  else state.credits -= price.credits;
+
+  state.eggBought++;
+  state.pets.push(newPet({ first: false }));
+  state.petIndex = state.pets.length - 1;
+
+  save();
+  render();
+  toast('新蛋到手，去「设置 → 宠物形象」上传蛋和幼体的图');
+}
+
+function recyclePet() {
+  var p = curPet();
+  if (!p) return;
+  if (state.pets.length <= 1) { toast('至少要留一只宠物'); return; }
+  if (p.stage === 'egg') { toast('还没孵化的蛋不能回收'); return; }
+
+  if (!confirm('回收「' + (p.name || '宠物') + '」？会退回 ' + RECYCLE_CREDITS + ' 积分。')) return;
+
+  state.credits += RECYCLE_CREDITS;
+  state.pets.splice(state.petIndex, 1);
+
+  var all = loadAllImages();
+  delete all[p.id];
+  saveAllImages(all);
+
+  state.petIndex = Math.max(0, Math.min(state.petIndex, state.pets.length - 1));
+  save();
+  render();
+  toast('已回收，+' + RECYCLE_CREDITS + ' 积分');
+}
+
+function applyPetImage(pet, mood) {
+  var imgs = petImages(pet.id);
+  var src = '';
+  if (pet.stage === 'egg') {
+    src = imgs.egg || '';
+  } else if (pet.stage === 'juvenile') {
+    src = imgs[pet.juvenilePick] || imgs.juvenile || imgs.juvenile2 || '';
+  } else {
+    src = imgs[mood] || imgs[pet.juvenilePick] || imgs.juvenile || imgs.juvenile2 || '';
+  }
+
+  var petEl = $('#pet');
   var img = $('#petImg');
-  if (!pet || !img) return;
+  if (!petEl || !img) return;
+
   if (src) {
     if (img.getAttribute('src') !== src) img.src = src;
-    pet.classList.add('has-img');
+    petEl.classList.add('has-img');
   } else {
-    pet.classList.remove('has-img');
+    petEl.classList.remove('has-img');
     img.removeAttribute('src');
   }
 }
@@ -1201,61 +1427,58 @@ function afterPetImageChange() {
   renderPet();
 }
 
+var STAGE_NAME = { egg: '蛋', juvenile: '幼体', adult: '成体' };
+
 function renderUploads() {
   var box = $('#uploadList');
   if (!box) return;
-  var imgs = loadPetImages();
-  var cur = currentMood();
+  var p = curPet();
+  if (!p) return;
+
   box.innerHTML = '';
+
+  /* 选择要编辑哪只宠物 */
+  var tabs = document.createElement('div');
+  tabs.className = 'upl-pets';
+  state.pets.forEach(function (pp, i) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'upl-pet' + (i === state.petIndex ? ' on' : '');
+    b.textContent = pp.name || ('宠物' + (i + 1));
+    b.addEventListener('click', function () {
+      state.petIndex = i;
+      save();
+      render();
+    });
+    tabs.appendChild(b);
+  });
+  box.appendChild(tabs);
 
   var hint = document.createElement('div');
   hint.className = 'upload-hint';
-  hint.textContent = '宠物现在用的是「' + MOOD_LABEL[cur] + '」这一张';
+  hint.textContent = '正在编辑：' + (p.name || '宠物') + ' · ' + (STAGE_NAME[p.stage] || '蛋');
   box.appendChild(hint);
 
-  var allSame = MOOD_ORDER.every(function (m) {
-    return imgs[m] && imgs[m] === imgs[MOOD_ORDER[0]];
-  });
+  var imgs = petImages(p.id);
 
-  box.appendChild(makeUploadRow({
-    label: '全部共用',
-    mood: 'all',
-    src: allSame ? imgs[MOOD_ORDER[0]] : '',
-    current: false,
-    onPick: function (url) {
-      var o = {};
-      MOOD_ORDER.forEach(function (m) { o[m] = url; });
-      if (savePetImages(o)) {
-        afterPetImageChange();
-        toast('四个状态都换成这张了');
-      }
-    },
-    onDelete: function () {
-      localStorage.removeItem(IMG_KEY);
-      afterPetImageChange();
-    }
-  }));
-
-  MOOD_ORDER.forEach(function (m) {
+  IMG_KEYS.forEach(function (k) {
     box.appendChild(makeUploadRow({
-      label: MOOD_LABEL[m],
-      mood: m,
-      src: imgs[m],
-      current: m === cur,
+      label: IMG_LABEL[k],
+      mood: k,
+      src: imgs[k],
+      current: false,
       onPick: function (url) {
-        var o = loadPetImages();
-        o[m] = url;
-        if (savePetImages(o)) {
+        if (setPetImage(p.id, k, url)) {
+          if (k === 'juvenile' && p.stage === 'egg' && p.growth >= STAGE_NEED.egg) {
+            advanceStage(p);
+            save();
+          }
           afterPetImageChange();
-          toast(m === cur
-            ? '已更新「' + MOOD_LABEL[m] + '」'
-            : '已存到「' + MOOD_LABEL[m] + '」，现在显示的是「' + MOOD_LABEL[cur] + '」这张');
+          toast('已更新「' + IMG_LABEL[k] + '」');
         }
       },
       onDelete: function () {
-        var o = loadPetImages();
-        delete o[m];
-        savePetImages(o);
+        setPetImage(p.id, k, '');
         afterPetImageChange();
       }
     }));
@@ -1304,9 +1527,52 @@ function extraScore(rec, date) {
 }
 
 /* 今天显示的饱食度：还没打卡睡觉时不扣迟到分 */
-function liveFullness() {
+/* 当天赚到的分，平均分给每只宠物 */
+function dailyShare() {
   var rec = dayRec();
-  return clamp(state.base + campusScore(rec) + extraScore(rec), FULL_MIN, FULL_MAX);
+  var n = (state.pets && state.pets.length) || 1;
+  return (campusScore(rec) + extraScore(rec)) / n;
+}
+
+function liveFullnessOf(p) {
+  return clamp(p.base + dailyShare(), FULL_MIN, FULL_MAX);
+}
+
+function liveFullness() {
+  var p = curPet();
+  return p ? liveFullnessOf(p) : 0;
+}
+
+function liveAvgFullness() {
+  if (!state.pets || !state.pets.length) return 0;
+  var sum = 0;
+  state.pets.forEach(function (p) { sum += liveFullnessOf(p); });
+  return sum / state.pets.length;
+}
+
+/* 阶段推进：必须满足连续天数，蛋→幼体还必须先上传幼体图 */
+function advanceStage(p) {
+  if (p.stage === 'adult') return;
+  var need = STAGE_NEED[p.stage];
+  if (!need || p.growth < need) return;
+
+  if (p.stage === 'egg') {
+    var imgs = petImages(p.id);
+    if (!imgs.juvenile && !imgs.juvenile2) return;   /* 至少传一张幼体图 */
+
+    /* 两张都传了 → 随机抽一张 */
+    if (imgs.juvenile && imgs.juvenile2) {
+      p.juvenilePick = Math.random() < 0.5 ? 'juvenile' : 'juvenile2';
+    } else {
+      p.juvenilePick = imgs.juvenile ? 'juvenile' : 'juvenile2';
+    }
+
+    p.stage = 'juvenile';
+    p.growth = 0;
+  } else if (p.stage === 'juvenile') {
+    p.stage = 'adult';
+    p.growth = 0;
+  }
 }
 
 function bandOf(f) {
@@ -1400,8 +1666,19 @@ function settle() {
 
 function settleDay(date) {
   var rec = dayRec(date);
-  var earned = campusScore(rec) + extraScore(rec, date);
-  var f = clamp(state.base + earned, FULL_MIN, FULL_MAX);
+  var n = (state.pets && state.pets.length) || 1;
+  var share = (campusScore(rec) + extraScore(rec, date)) / n;
+  var finals = [];
+
+  state.pets.forEach(function (p) {
+    var f = clamp(p.base + share, FULL_MIN, FULL_MAX);
+    p.base = (f >= RESET_LINE) ? 0 : f;
+    finals.push(f);
+  });
+
+  var f = finals.length
+    ? finals.reduce(function (a, b) { return a + b; }, 0) / finals.length
+    : 0;
   rec.final = f;
 
   applyExp(bandOf(f).delta);
@@ -1431,8 +1708,12 @@ function settleDay(date) {
     rec.streakBonus = STREAK_BONUS_CREDITS;
   }
 
-  /* 结转：≥60 第二天清零，否则带着走 */
-  state.base = (f >= RESET_LINE) ? 0 : f;
+  /* 每只宠物各自成长：第一只按作业全完成，其它按饱食度 ≥60 */
+  state.pets.forEach(function (p, i) {
+    var ok = p.first ? dayComplete(date) : (finals[i] >= RESET_LINE);
+    p.growth = ok ? p.growth + 1 : 0;
+    advanceStage(p);
+  });
 }
 
 /* =========================================================
@@ -1475,14 +1756,44 @@ function moodOf(f) {
   return 'happy';
 }
 
-function renderPet() {
-  var rec = dayRec();
-  var f = liveFullness();
-  var band = bandOf(f);
+function stageText(p) {
+  if (p.stage === 'adult') return '🐉 成体 · 已完全长大';
 
-  var mood = moodOf(f);
+  var need = STAGE_NEED[p.stage];
+  var done = Math.min(p.growth, need);
+  var left = Math.max(0, need - done);
+
+  if (p.stage === 'egg') {
+    var im = petImages(p.id);
+    var head = '🥚 龙蛋 · 连续 ' + done + '/' + need + ' 天';
+    if (p.growth >= need && !im.juvenile && !im.juvenile2) {
+      return head + ' · 上传幼体图就能孵化';
+    }
+    return head + ' · 再 ' + left + ' 天孵化';
+  }
+
+  var which = p.juvenilePick === 'juvenile2' ? 'B' : (p.juvenilePick === 'juvenile' ? 'A' : '');
+  return '🐣 幼体' + (which ? '（' + which + '）' : '') + ' · 连续 ' + done + '/' + need + ' 天 · 再 ' + left + ' 天变成体';
+}
+
+function eggPrice() {
+  var n = state.pets ? state.pets.length : 1;
+  return EGG_COST[Math.min(n, EGG_COST.length - 1)];
+}
+
+function renderPet() {
+  var p = curPet();
+  if (!p) return;
+
+  var rec = dayRec();
+  var f = liveFullnessOf(p);
+  var avg = liveAvgFullness();
+  var band = bandOf(avg);
+  var mood = p.stage === 'adult' ? moodOf(f) : 'need';
+
   var pet = $('#pet');
-  pet.dataset.color = state.pet.color || 'night';
+  pet.dataset.color = p.color || 'night';
+  pet.dataset.stage = p.stage;
   pet.dataset.mood = mood;
   $('#dragon').dataset.mood = mood;
 
@@ -1493,10 +1804,28 @@ function renderPet() {
     setTimeout(function () { pet.classList.remove('mood-pop'); }, 600);
   }
   lastMood = mood;
-  $('#fishBubble').classList.toggle('show', mood === 'need');
-  applyPetImage(mood);
 
-  $('#petNameLabel').textContent = state.pet.name || '无牙仔';
+  applyPetImage(p, mood);
+  var hasPic = pet.classList.contains('has-img');
+  $('#fishBubble').classList.toggle('show', p.stage === 'adult' && mood === 'need' && !hasPic);
+
+  /* 多只切换 */
+  var multi = state.pets.length > 1;
+  $('#petPrev').classList.toggle('show', multi);
+  $('#petNext').classList.toggle('show', multi);
+
+  var dots = $('#petDots');
+  dots.innerHTML = '';
+  if (multi) {
+    state.pets.forEach(function (pp, i) {
+      var d = document.createElement('i');
+      if (i === state.petIndex) d.className = 'on';
+      dots.appendChild(d);
+    });
+  }
+  $('#petStageLine').textContent = stageText(p);
+
+  $('#petNameLabel').textContent = p.name || '无牙仔';
   $('#expChip').textContent = state.exp;
   $('#creditChip').textContent = state.credits;
 
@@ -1523,8 +1852,8 @@ function renderPet() {
   var dlt = band.delta;
   var dTxt = dlt > 0 ? '+' + dlt : (dlt === 0 ? '±0' : String(dlt));
   var carryTxt = '';
-  if (state.base < 0) carryTxt = ' ｜ 昨天没吃够，今天从 ' + state.base + ' 开始';
-  else if (state.base > 0) carryTxt = ' ｜ 接着昨天的 ' + state.base + ' 算';
+  if (p.base < 0) carryTxt = ' ｜ 昨天没吃够，今天从 ' + p.base + ' 开始';
+  else if (p.base > 0) carryTxt = ' ｜ 接着昨天的 ' + p.base + ' 算';
   $('#todayNote').textContent = (rec.sleep
     ? '饱食度 ' + f + ' → 今晚结算 ' + dTxt + ' 经验'
     : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡') + carryTxt;
@@ -1573,6 +1902,23 @@ function renderPet() {
       sub.textContent = bedtime + ' 前打卡；晚了扣 ' + SLEEP_LATE_EXP + ' 点，忘打扣 ' + SLEEP_MISS_EXP + ' 点经验';
     }
   }
+
+  /* 买蛋 / 回收 */
+  var price = eggPrice();
+  var full = state.pets.length >= MAX_PETS;
+  var canPay = price.exp ? (state.exp >= price.exp) : (state.credits >= price.credits);
+
+  $('#pmTitle').textContent = full ? '已经有 3 只了' : '买一颗新蛋';
+  $('#pmSub').textContent = full
+    ? '最多同时养 3 只，回收一只才能再买'
+    : (price.exp ? '第 ' + (state.pets.length + 1) + ' 只需要 ' + price.exp + ' 点经验' : '第 ' + (state.pets.length + 1) + ' 只需要 ' + price.credits + ' 积分');
+
+  var buyBtn = $('#buyEggBtn');
+  buyBtn.disabled = full || !canPay;
+  buyBtn.textContent = full ? '已满' : '买蛋';
+
+  var canRecycle = state.pets.length > 1 && p.stage !== 'egg';
+  $('#recycleRow').style.display = canRecycle ? '' : 'none';
 
   $('#sickCard').style.display = state.sick ? '' : 'none';
 }
@@ -2298,11 +2644,12 @@ function closeModal() {
    渲染：设置
    ========================================================= */
 function renderSettings() {
-  $('#nameInput').value = state.pet.name || '';
+  var p = curPet();
+  $('#nameInput').value = p ? (p.name || '') : '';
   $('#bedtimeInput').value = state.settings.bedtime || '23:30';
   $('#pinInput').value = state.settings.pin || '';
   $$('#swatches button').forEach(function (b) {
-    b.classList.toggle('on', b.dataset.color === state.pet.color);
+    b.classList.toggle('on', !!p && b.dataset.color === p.color);
   });
   renderUploads();
 }
@@ -2498,20 +2845,42 @@ function bindEvents() {
 
   /* 名字 */
   $('#nameInput').addEventListener('input', function () {
-    state.pet.name = this.value.slice(0, 10);
+    var p = curPet();
+    if (!p) return;
+    p.name = this.value.slice(0, 10);
     save();
-    $('#petNameLabel').textContent = state.pet.name || '无牙仔';
+    $('#petNameLabel').textContent = p.name || '无牙仔';
   });
 
   /* 颜色 */
   $$('#swatches button').forEach(function (b) {
     b.addEventListener('click', function () {
-      state.pet.color = b.dataset.color;
+      var p = curPet();
+      if (!p) return;
+      p.color = b.dataset.color;
       save();
       renderSettings();
       renderPet();
     });
   });
+
+  /* 切换宠物 */
+  $('#petPrev').addEventListener('click', function () {
+    if (state.pets.length < 2) return;
+    state.petIndex = (state.petIndex - 1 + state.pets.length) % state.pets.length;
+    save(); render();
+  });
+  $('#petNext').addEventListener('click', function () {
+    if (state.pets.length < 2) return;
+    state.petIndex = (state.petIndex + 1) % state.pets.length;
+    save(); render();
+  });
+
+  /* 买蛋 */
+  $('#buyEggBtn').addEventListener('click', buyEgg);
+
+  /* 回收 */
+  $('#recycleBtn').addEventListener('click', recyclePet);
 
   /* 睡觉时间 */
   $('#bedtimeInput').addEventListener('change', function () {
@@ -2522,13 +2891,17 @@ function bindEvents() {
     toast('睡觉时间设为 ' + v);
   });
 
-  /* 恢复默认形象 */
+  /* 清空当前宠物的图片 */
   $('#clearPetImgs').addEventListener('click', function () {
-    if (!confirm('恢复默认形象？已上传的图片会被删除。')) return;
-    localStorage.removeItem(IMG_KEY);
+    var p = curPet();
+    if (!p) return;
+    if (!confirm('清空「' + (p.name || '宠物') + '」的所有图片？')) return;
+    var all = loadAllImages();
+    delete all[p.id];
+    saveAllImages(all);
     renderUploads();
     renderPet();
-    toast('已恢复默认形象');
+    toast('已清空这只宠物的图片');
   });
 
   /* 家长密码 */
@@ -2599,6 +2972,10 @@ function bindEvents() {
    ========================================================= */
 function boot() {
   load();
+
+  /* 如果连续天数早就够了，只差图片，启动时补一次孵化 */
+  (state.pets || []).forEach(advanceStage);
+
   settle();
   dayRec();
   save();
