@@ -958,9 +958,14 @@
         <div class="card">
           <h2 class="card-title">睡觉与家长</h2>
           <div class="field">
-            <label for="bedtimeInput">睡觉时间</label>
+            <label for="bestBedInput">最佳时间</label>
+            <input id="bestBedInput" class="text-input" type="time" style="width:140px;text-align:center">
+          </div>
+          <div class="field">
+            <label for="bedtimeInput">最晚时间</label>
             <input id="bedtimeInput" class="text-input" type="time" style="width:140px;text-align:center">
           </div>
+          <p class="hint" style="margin:2px 0 0">最佳时间前打卡：饱食度 80+ 额外 +2、90+ 额外 +3 经验；最晚时间前打卡才计入连续天数。</p>
           <div class="field">
             <label for="pinInput">家长密码</label>
             <input id="pinInput" class="text-input" type="tel" inputmode="numeric" maxlength="4"
@@ -1018,6 +1023,13 @@ var CAMPUS_POINTS = 60;
 var EXTRA_POINT = 10;
 var SLEEP_LATE_EXP = 2;    /* 23:30 后打卡、或凌晨补卡，扣多少经验 */
 var SLEEP_MISS_EXP = 3;    /* 整天没打卡，扣多少经验 */
+var EARLY_BED = '22:30';   /* 早睡默认线，可在设置里改 */
+
+function bestBed() {
+  return (state && state.settings && state.settings.bestBed) || EARLY_BED;
+}
+var EARLY_BONUS_80 = 2;    /* 饱食度 80+ 的早睡奖励 */
+var EARLY_BONUS_90 = 3;    /* 饱食度 90+ 的早睡奖励 */
 var SICK_PENALTY = 10;
 var SICK_AFTER = 3;
 var FULL_MAX = 100;
@@ -1115,6 +1127,7 @@ function makeState() {
     pets: [newPet({ id: 'p1', name: '无牙仔', first: true })],
     petIndex: 0,
     eggBought: 1,
+    growthFixed: false,
     exp: 0,
     credits: 0,
     lowStreak: 0,
@@ -1126,7 +1139,7 @@ function makeState() {
     rewards: defaultRewards(),
     redemptions: [],
     streakRewarded: false,
-    settings: { bedtime: '23:30', pin: '' }
+    settings: { bestBed: '22:30', bedtime: '23:30', pin: '' }
   };
 }
 
@@ -1152,6 +1165,7 @@ function load() {
         pets: Array.isArray(s.pets) ? s.pets : null,
         petIndex: s.petIndex || 0,
         eggBought: typeof s.eggBought === 'number' ? s.eggBought : 1,
+        growthFixed: !!s.growthFixed,
         exp: typeof s.exp === 'number' ? s.exp : 0,
         credits: typeof s.credits === 'number' ? s.credits : 0,
         lowStreak: s.lowStreak || 0,
@@ -1527,6 +1541,15 @@ function extraScore(rec, date) {
 }
 
 /* 今天显示的饱食度：还没打卡睡觉时不扣迟到分 */
+/* 早睡奖励：22:30 前打卡，饱食度 80+ 加 2，90+ 加 3 */
+function earlyBonusOf(f, sleep) {
+  if (!sleep || sleep.late || sleep.overnight) return 0;
+  if (sleep.time > bestBed()) return 0;
+  if (f >= 90) return EARLY_BONUS_90;
+  if (f >= 80) return EARLY_BONUS_80;
+  return 0;
+}
+
 /* 当天赚到的分，平均分给每只宠物 */
 function dailyShare() {
   var rec = dayRec();
@@ -1548,6 +1571,23 @@ function liveAvgFullness() {
   var sum = 0;
   state.pets.forEach(function (p) { sum += liveFullnessOf(p); });
   return sum / state.pets.length;
+}
+
+/* 一次性修复：把规则改动前丢掉的连续天数补回「第一只蛋」的成长进度。
+   只补到昨天为止，今天的打卡等当晚结算时再计入，避免重复。 */
+function repairGrowthOnce() {
+  if (state.growthFixed) return;
+
+  var yest = addDays(todayKey(), -1);
+  var st = streakEndingAt(yest);
+
+  state.pets.forEach(function (p) {
+    if (p.first && p.stage === 'egg' && st > p.growth) p.growth = st;
+  });
+
+  state.growthFixed = true;
+  state.pets.forEach(advanceStage);
+  save();
 }
 
 /* 阶段推进：必须满足连续天数，蛋→幼体还必须先上传幼体图 */
@@ -1583,14 +1623,16 @@ function bandOf(f) {
 }
 
 /* 某一天是否全部完成 */
+/* 「连续打卡」= 当天在 23:30 前点了睡觉卡。
+   迟到打卡、凌晨补卡都不算；作业做没做完只影响饱食度。 */
 function dayComplete(date) {
   var rec = state.days[date];
   if (!rec) return false;
-  var campusOk = state.tasks.campus.length > 0 &&
-    state.tasks.campus.every(function (t) { return !!rec.campus[t.id]; });
-  var items = extraItemsForDate(date);
-  var extraOk = items.every(function (t) { return !!rec.extra[t.id]; });
-  return campusOk && extraOk;
+
+  /* 已经结算过的一天，结果冻结 */
+  if (typeof rec.complete === 'boolean') return rec.complete;
+
+  return !!(rec.sleep && !rec.sleep.late && !rec.sleep.overnight);
 }
 
 /* 截止到某一天为止，连续完成了几天 */
@@ -1666,6 +1708,10 @@ function settle() {
 
 function settleDay(date) {
   var rec = dayRec(date);
+
+  /* 先把这一天的「全部完成」判定冻结下来，之后加/删作业也不会回头改历史 */
+  rec.complete = dayComplete(date);
+
   var n = (state.pets && state.pets.length) || 1;
   var share = (campusScore(rec) + extraScore(rec, date)) / n;
   var finals = [];
@@ -1685,6 +1731,13 @@ function settleDay(date) {
 
   /* 整天没打睡觉卡 */
   if (!rec.sleep) applyExp(-SLEEP_MISS_EXP);
+
+  /* 早睡奖励 */
+  var earlyB = earlyBonusOf(f, rec.sleep);
+  if (earlyB) {
+    applyExp(earlyB);
+    rec.earlyBonus = earlyB;
+  }
 
   if (f < RESET_LINE) {
     state.lowStreak++;
@@ -1706,6 +1759,16 @@ function settleDay(date) {
     state.credits += STREAK_BONUS_CREDITS;
     state.streakRewarded = true;
     rec.streakBonus = STREAK_BONUS_CREDITS;
+
+    /* 记一笔，方便在奖励页看到积分从哪来 */
+    var dd = parseKey(date);
+    state.redemptions.unshift({
+      id: 'sb' + date,
+      name: '连续打卡 ' + STREAK_BONUS_AT + ' 天奖励',
+      cost: STREAK_BONUS_CREDITS,
+      gain: true,
+      at: (dd.getMonth() + 1) + '月' + dd.getDate() + '日'
+    });
   }
 
   /* 每只宠物各自成长：第一只按作业全完成，其它按饱食度 ≥60 */
@@ -1854,8 +1917,9 @@ function renderPet() {
   var carryTxt = '';
   if (p.base < 0) carryTxt = ' ｜ 昨天没吃够，今天从 ' + p.base + ' 开始';
   else if (p.base > 0) carryTxt = ' ｜ 接着昨天的 ' + p.base + ' 算';
+  var earlyNow = rec.sleep ? earlyBonusOf(f, rec.sleep) : 0;
   $('#todayNote').textContent = (rec.sleep
-    ? '饱食度 ' + f + ' → 今晚结算 ' + dTxt + ' 经验'
+    ? '饱食度 ' + f + ' → 今晚结算 ' + dTxt + ' 经验' + (earlyNow ? '，早睡再 +' + earlyNow : '')
     : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡') + carryTxt;
 
   if (Date.now() > bubbleLock) {
@@ -1876,30 +1940,34 @@ function renderPet() {
     sub.classList.remove('warn', 'done');
     if (srec.sleep.overnight) {
       sub.classList.add('warn');
-      sub.textContent = '这次 ' + srec.sleep.time + ' 才睡，算补昨晚的卡，扣 ' + SLEEP_LATE_EXP + ' 点经验';
+      sub.textContent = '这次 ' + srec.sleep.time + ' 才睡，算补昨晚的卡，扣 ' + SLEEP_LATE_EXP + ' 点经验 · 不算连续打卡';
     } else if (srec.sleep.late) {
       sub.classList.add('warn');
-      sub.textContent = '这次 ' + srec.sleep.time + ' 才打卡，超过 ' + bedtime + '，扣 ' + SLEEP_LATE_EXP + ' 点经验';
+      sub.textContent = '这次 ' + srec.sleep.time + ' 才打卡，超过 ' + bedtime + '，扣 ' + SLEEP_LATE_EXP + ' 点经验 · 不算连续打卡';
     } else {
       sub.classList.add('done');
-      sub.textContent = '这次 ' + srec.sleep.time + ' 打卡，准时 ✓';
+      sub.textContent = '这次 ' + srec.sleep.time + ' 打卡，准时 ✓'
+        + (srec.sleep.time <= bestBed() ? ' · 早睡奖励今晚结算' : '');
     }
   } else if (overnightNow) {
     btn.disabled = false;
     btn.textContent = '补卡';
     sub.classList.remove('done');
     sub.classList.add('warn');
-    sub.textContent = '已经过了 0 点，现在打卡算补昨晚的，扣 ' + SLEEP_LATE_EXP + ' 点经验';
+    sub.textContent = '已经过了 0 点，现在打卡算补昨晚的，扣 ' + SLEEP_LATE_EXP + ' 点经验 · 不算连续打卡';
   } else {
     btn.disabled = false;
     btn.textContent = nowHM() > bedtime ? '补卡' : '打卡';
     sub.classList.remove('done');
     if (nowHM() > bedtime) {
       sub.classList.add('warn');
-      sub.textContent = '已经过了 ' + bedtime + '，现在打卡扣 ' + SLEEP_LATE_EXP + ' 点经验';
+      sub.textContent = '已经过了 ' + bedtime + '，现在打卡扣 ' + SLEEP_LATE_EXP + ' 点经验 · 不算连续打卡';
+    } else if (nowHM() <= bestBed()) {
+      sub.classList.remove('warn');
+      sub.textContent = '现在打卡算早睡：饱食度 80+ 额外 +' + EARLY_BONUS_80 + '、90+ 额外 +' + EARLY_BONUS_90 + ' 经验';
     } else {
       sub.classList.remove('warn');
-      sub.textContent = bedtime + ' 前打卡；晚了扣 ' + SLEEP_LATE_EXP + ' 点，忘打扣 ' + SLEEP_MISS_EXP + ' 点经验';
+      sub.textContent = bedtime + ' 前打卡计入连续天数；' + bestBed() + ' 前的早睡奖励这次拿不到了';
     }
   }
 
@@ -2646,6 +2714,7 @@ function closeModal() {
 function renderSettings() {
   var p = curPet();
   $('#nameInput').value = p ? (p.name || '') : '';
+  $('#bestBedInput').value = state.settings.bestBed || EARLY_BED;
   $('#bedtimeInput').value = state.settings.bedtime || '23:30';
   $('#pinInput').value = state.settings.pin || '';
   $$('#swatches button').forEach(function (b) {
@@ -2882,13 +2951,26 @@ function bindEvents() {
   /* 回收 */
   $('#recycleBtn').addEventListener('click', recyclePet);
 
-  /* 睡觉时间 */
+  /* 最佳睡觉时间 */
+  $('#bestBedInput').addEventListener('change', function () {
+    var v = this.value || EARLY_BED;
+    state.settings.bestBed = v;
+    save();
+    renderPet();
+    if (v > (state.settings.bedtime || '23:30')) {
+      toast('最佳时间应该早于最晚时间，否则拿不到早睡奖励');
+    } else {
+      toast('最佳睡觉时间设为 ' + v);
+    }
+  });
+
+  /* 最晚睡觉时间 */
   $('#bedtimeInput').addEventListener('change', function () {
     var v = this.value || '23:30';
     state.settings.bedtime = v;
     save();
     renderPet();
-    toast('睡觉时间设为 ' + v);
+    toast('最晚睡觉时间设为 ' + v);
   });
 
   /* 清空当前宠物的图片 */
@@ -2977,6 +3059,7 @@ function boot() {
   (state.pets || []).forEach(advanceStage);
 
   settle();
+  repairGrowthOnce();
   dayRec();
   save();
 
