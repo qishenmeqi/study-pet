@@ -816,7 +816,7 @@
             <div class="tstat"><b id="tCampus">0/4</b><span>校园作业</span></div>
             <div class="tstat"><b id="tExtra">0/2</b><span>课外练习</span></div>
             <div class="tstat"><b id="tSleep">未打卡</b><span>睡觉</span></div>
-            <div class="tstat"><b id="tStreak">0</b><span>连续天数</span></div>
+            <div class="tstat"><b id="tStreak">0</b><span title="23:30 前打卡才算">准时连续</span></div>
           </div>
           <div class="today-note" id="todayNote">今天还没开始</div>
         </div>
@@ -1127,7 +1127,7 @@ function makeState() {
     pets: [newPet({ id: 'p1', name: '无牙仔', first: true })],
     petIndex: 0,
     eggBought: 1,
-    growthFixed: false,
+    growthFixVersion: 0,
     exp: 0,
     credits: 0,
     lowStreak: 0,
@@ -1165,7 +1165,7 @@ function load() {
         pets: Array.isArray(s.pets) ? s.pets : null,
         petIndex: s.petIndex || 0,
         eggBought: typeof s.eggBought === 'number' ? s.eggBought : 1,
-        growthFixed: !!s.growthFixed,
+        growthFixVersion: s.growthFixVersion || (s.growthFixed ? 1 : 0),
         exp: typeof s.exp === 'number' ? s.exp : 0,
         credits: typeof s.credits === 'number' ? s.credits : 0,
         lowStreak: s.lowStreak || 0,
@@ -1576,16 +1576,16 @@ function liveAvgFullness() {
 /* 一次性修复：把规则改动前丢掉的连续天数补回「第一只蛋」的成长进度。
    只补到昨天为止，今天的打卡等当晚结算时再计入，避免重复。 */
 function repairGrowthOnce() {
-  if (state.growthFixed) return;
+  if ((state.growthFixVersion || 0) >= 2) return;
 
   var yest = addDays(todayKey(), -1);
-  var st = streakEndingAt(yest);
+  var st = checkinStreakEndingAt(yest);
 
   state.pets.forEach(function (p) {
     if (p.first && p.stage === 'egg' && st > p.growth) p.growth = st;
   });
 
-  state.growthFixed = true;
+  state.growthFixVersion = 2;
   state.pets.forEach(advanceStage);
   save();
 }
@@ -1623,22 +1623,36 @@ function bandOf(f) {
 }
 
 /* 某一天是否全部完成 */
-/* 「连续打卡」= 当天在 23:30 前点了睡觉卡。
-   迟到打卡、凌晨补卡都不算；作业做没做完只影响饱食度。 */
-function dayComplete(date) {
+/* 「准时连续」= 当天 23:30 前点了睡觉卡（用于 +1 积分奖励） */
+function dayOnTime(date) {
   var rec = state.days[date];
   if (!rec) return false;
-
-  /* 已经结算过的一天，结果冻结 */
-  if (typeof rec.complete === 'boolean') return rec.complete;
-
+  if (typeof rec.onTime === 'boolean') return rec.onTime;
   return !!(rec.sleep && !rec.sleep.late && !rec.sleep.overnight);
 }
 
-/* 截止到某一天为止，连续完成了几天 */
+/* 「当天打过卡」= 有任何睡觉打卡记录（含迟到、凌晨补卡），用于孵化成长 */
+function dayCheckedIn(date) {
+  var rec = state.days[date];
+  if (!rec) return false;
+  if (typeof rec.checked === 'boolean') return rec.checked;
+  return !!rec.sleep;
+}
+
+/* 截止到某一天为止，连续准时打卡了几天（用于 +1 积分） */
 function streakEndingAt(date) {
   var n = 0, k = date, guard = 0;
-  while (dayComplete(k) && guard++ < 2000) {
+  while (dayOnTime(k) && guard++ < 2000) {
+    n++;
+    k = addDays(k, -1);
+  }
+  return n;
+}
+
+/* 截止到某一天为止，连续「打过卡」几天（用于孵化，晚睡/补卡都算） */
+function checkinStreakEndingAt(date) {
+  var n = 0, k = date, guard = 0;
+  while (dayCheckedIn(k) && guard++ < 2000) {
     n++;
     k = addDays(k, -1);
   }
@@ -1648,7 +1662,7 @@ function streakEndingAt(date) {
 /* 界面上显示的连续天数（今天没完成就从昨天往前数） */
 function computeStreak() {
   var k = todayKey();
-  if (!dayComplete(k)) k = addDays(k, -1);
+  if (!dayOnTime(k)) k = addDays(k, -1);
   return streakEndingAt(k);
 }
 
@@ -1710,7 +1724,8 @@ function settleDay(date) {
   var rec = dayRec(date);
 
   /* 先把这一天的「全部完成」判定冻结下来，之后加/删作业也不会回头改历史 */
-  rec.complete = dayComplete(date);
+  rec.onTime = dayOnTime(date);
+  rec.checked = dayCheckedIn(date);
 
   var n = (state.pets && state.pets.length) || 1;
   var share = (campusScore(rec) + extraScore(rec, date)) / n;
@@ -1773,7 +1788,7 @@ function settleDay(date) {
 
   /* 每只宠物各自成长：第一只按作业全完成，其它按饱食度 ≥60 */
   state.pets.forEach(function (p, i) {
-    var ok = p.first ? dayComplete(date) : (finals[i] >= RESET_LINE);
+    var ok = p.first ? dayCheckedIn(date) : (finals[i] >= RESET_LINE);
     p.growth = ok ? p.growth + 1 : 0;
     advanceStage(p);
   });
@@ -1828,7 +1843,7 @@ function stageText(p) {
 
   if (p.stage === 'egg') {
     var im = petImages(p.id);
-    var head = '🥚 龙蛋 · 连续 ' + done + '/' + need + ' 天';
+    var head = '🥚 龙蛋 · 已打卡 ' + done + '/' + need + ' 天';
     if (p.growth >= need && !im.juvenile && !im.juvenile2) {
       return head + ' · 上传幼体图就能孵化';
     }
@@ -1836,7 +1851,7 @@ function stageText(p) {
   }
 
   var which = p.juvenilePick === 'juvenile2' ? 'B' : (p.juvenilePick === 'juvenile' ? 'A' : '');
-  return '🐣 幼体' + (which ? '（' + which + '）' : '') + ' · 连续 ' + done + '/' + need + ' 天 · 再 ' + left + ' 天变成体';
+  return '🐣 幼体' + (which ? '（' + which + '）' : '') + ' · 已打卡 ' + done + '/' + need + ' 天 · 再 ' + left + ' 天变成体';
 }
 
 function eggPrice() {
