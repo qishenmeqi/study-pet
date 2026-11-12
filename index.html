@@ -596,6 +596,9 @@
     font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
   }
   .data-area:focus{ border-color:#8FBCF8; }
+  .setting-row{ display:flex; align-items:center; gap:12px; }
+  .restore-card{ max-width:400px; text-align:left; }
+  .restore-card h3, .restore-card > p{ text-align:center; }
   .restore-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px 12px; margin:10px 0 14px; }
   .restore-grid label{ display:flex; flex-direction:column; gap:6px; font-size:13px; font-weight:600; color:var(--ink-2); }
   .restore-grid label.wide{ grid-column:1 / -1; }
@@ -991,22 +994,13 @@
         </div>
 
         <div class="card">
-          <h2 class="card-title">手动补数据</h2>
-          <p class="hint" style="margin-top:0">数据丢了的时候用。填完点下面的按钮会覆盖当前数值。</p>
-          <div class="restore-grid">
-            <label>经验值<input id="restExp" class="text-input" type="number" min="0" inputmode="numeric"></label>
-            <label>积分<input id="restCredits" class="text-input" type="number" min="0" inputmode="numeric"></label>
-            <label>宠物阶段
-              <select id="restStage" class="text-input">
-                <option value="egg">蛋</option>
-                <option value="juvenile">幼体</option>
-                <option value="adult">成体</option>
-              </select>
-            </label>
-            <label>本阶段成长天数<input id="restGrowth" class="text-input" type="number" min="0" inputmode="numeric"></label>
-            <label class="wide">连续打卡天数<input id="restStreak" class="text-input" type="number" min="0" inputmode="numeric"></label>
+          <div class="setting-row">
+            <div class="pm-info">
+              <div class="pm-title">手动补数据</div>
+              <div class="pm-sub">数据丢了时用，需要家长密码</div>
+            </div>
+            <button class="btn ghost small" id="openRestoreBtn" type="button">打开</button>
           </div>
-          <button class="btn ghost block" id="restoreBtn">恢复这些数据</button>
         </div>
 
         <div class="about">
@@ -1027,6 +1021,31 @@
     <div class="modal-actions">
       <button class="btn ghost" id="modalCancel">取消</button>
       <button class="btn primary" id="modalOk">确定</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal hidden" id="restoreModal">
+  <div class="modal-card restore-card">
+    <h3>手动补数据</h3>
+    <p>填完点「恢复」会覆盖当前数值，需要家长操作。</p>
+    <div class="restore-grid">
+      <label>经验值<input id="restExp" class="text-input" type="number" min="0" inputmode="numeric"></label>
+      <label>积分<input id="restCredits" class="text-input" type="number" min="0" inputmode="numeric"></label>
+      <label>宠物阶段
+        <select id="restStage" class="text-input">
+          <option value="egg">蛋</option>
+          <option value="juvenile">幼体</option>
+          <option value="adult">成体</option>
+        </select>
+      </label>
+      <label>成长天数<input id="restGrowth" class="text-input" type="number" min="0" inputmode="numeric"></label>
+      <label class="wide">连续打卡天数<input id="restStreak" class="text-input" type="number" min="0" inputmode="numeric"></label>
+    </div>
+    <input class="modal-input" id="restorePin" type="tel" inputmode="numeric" maxlength="4" placeholder="家长密码">
+    <div class="modal-actions">
+      <button class="btn ghost" id="restoreCancel" type="button">取消</button>
+      <button class="btn primary" id="restoreOk" type="button">恢复</button>
     </div>
   </div>
 </div>
@@ -2760,16 +2779,6 @@ function renderSettings() {
     b.classList.toggle('on', !!p && b.dataset.color === p.color);
   });
 
-  /* 手动补数据：没在输入时就同步成当前值 */
-  function fillIfIdle(id, val) {
-    var el = $('#' + id);
-    if (el && document.activeElement !== el) el.value = val;
-  }
-  fillIfIdle('restExp', state.exp);
-  fillIfIdle('restCredits', state.credits);
-  fillIfIdle('restStage', p ? p.stage : 'egg');
-  fillIfIdle('restGrowth', p ? p.growth : 0);
-  fillIfIdle('restStreak', computeStreak());
 
   renderUploads();
 }
@@ -3088,15 +3097,38 @@ function bindEvents() {
     toast('恢复成功');
   });
 
-  /* 手动补数据 */
-  $('#restoreBtn').addEventListener('click', function () {
+  /* 手动补数据（弹窗，需要家长密码） */
+  $('#openRestoreBtn').addEventListener('click', function () {
+    var p = curPet();
+    $('#restExp').value = state.exp;
+    $('#restCredits').value = state.credits;
+    $('#restStage').value = p ? p.stage : 'egg';
+    $('#restGrowth').value = p ? p.growth : 0;
+    $('#restStreak').value = computeStreak();
+    $('#restorePin').value = '';
+    $('#restorePin').style.display = state.settings.pin ? '' : 'none';
+    $('#restoreModal').classList.remove('hidden');
+  });
+
+  $('#restoreCancel').addEventListener('click', function () {
+    $('#restoreModal').classList.add('hidden');
+  });
+
+  $('#restoreModal').addEventListener('click', function (e) {
+    if (e.target === $('#restoreModal')) $('#restoreModal').classList.add('hidden');
+  });
+
+  $('#restoreOk').addEventListener('click', function () {
+    if (state.settings.pin && $('#restorePin').value !== state.settings.pin) {
+      toast('家长密码不对');
+      return;
+    }
+
     var exp = Math.max(0, parseInt($('#restExp').value, 10) || 0);
     var credits = Math.max(0, parseInt($('#restCredits').value, 10) || 0);
     var stage = $('#restStage').value;
     var growth = Math.max(0, parseInt($('#restGrowth').value, 10) || 0);
     var streak = Math.max(0, parseInt($('#restStreak').value, 10) || 0);
-
-    if (!confirm('用这些数值覆盖当前数据？\n经验 ' + exp + ' · 积分 ' + credits + '\n阶段 ' + (STAGE_NAME[stage] || stage) + ' · 成长 ' + growth + ' 天 · 连续 ' + streak + ' 天')) return;
 
     state.exp = exp;
     state.credits = credits;
@@ -3121,6 +3153,7 @@ function bindEvents() {
 
     save();
     render();
+    $('#restoreModal').classList.add('hidden');
     toast('已恢复');
   });
 
