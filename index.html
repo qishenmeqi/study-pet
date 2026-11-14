@@ -857,7 +857,7 @@
         <div class="card" id="sickCard" style="display:none">
           <div class="sleep-info">
             <div class="sleep-title" style="color:#1E5FBF">🤒 生病中</div>
-            <div class="sleep-sub">连续 3 天饱食度不到 60。每天额外 −10 经验，扣不够就从积分里补。把饱食度拉回 60 以上就会好。</div>
+            <div class="sleep-sub">连续 3 天饱食度不到 60。低于 60 的日子经验按 −5、−6、−7… 递增（最多 −10）。把饱食度拉回 60 以上就会好。</div>
           </div>
         </div>
 
@@ -1073,7 +1073,13 @@ function bestBed() {
 }
 var EARLY_BONUS_80 = 2;    /* 饱食度 80+ 的早睡奖励 */
 var EARLY_BONUS_90 = 3;    /* 饱食度 90+ 的早睡奖励 */
-var SICK_PENALTY = 10;
+var LOW_BASE = 5;      /* 连续低于 60 第 1 天扣 5 */
+var LOW_STEP = 1;      /* 每多一天多扣 1 */
+var LOW_CAP = 10;      /* 最多扣到 10 */
+
+function lowPenaltyFor(n) {
+  return Math.min(LOW_BASE + (n - 1) * LOW_STEP, LOW_CAP);
+}
 var SICK_AFTER = 3;
 var FULL_MAX = 100;
 var FULL_MIN = -100;
@@ -1600,17 +1606,9 @@ function dailyShare() {
   return (campusScore(rec) + extraScore(rec)) / n;
 }
 
-/* 结转规则：
-   - 昨天是负数 → 今天继续背这个欠账（-20 + 80 = 60）
-   - 昨天是正数 → 只当"下限"，今天做得多就按实际得分算，不叠加
-     例：昨天 55，今天做满 80 → 显示 80，而不是 135 封顶 100 */
-function applyCarry(base, share) {
-  if (base < 0) return clamp(base + share, FULL_MIN, FULL_MAX);
-  return clamp(Math.max(base, share), 0, FULL_MAX);
-}
-
+/* 每天重置：饱食度只看当天得分，不结转 */
 function liveFullnessOf(p) {
-  return applyCarry(p.base, dailyShare());
+  return clamp(dailyShare(), 0, FULL_MAX);
 }
 
 function liveFullness() {
@@ -1668,7 +1666,8 @@ function advanceStage(p) {
 }
 
 function bandOf(f) {
-  if (f < RESET_LINE) return { key: 'low',   delta: -5 };
+  /* <60 的扣分按连续天数递增，由 lowPenaltyFor 单独计算 */
+  if (f < RESET_LINE) return { key: 'low',   delta: 0 };
   if (f <= 80) return { key: 'ok',    delta: 0 };
   if (f <= 89) return { key: 'good',  delta: 1 };
   return { key: 'great', delta: 5 };
@@ -1784,8 +1783,8 @@ function settleDay(date) {
   var finals = [];
 
   state.pets.forEach(function (p) {
-    var f = applyCarry(p.base, share);
-    p.base = (f >= RESET_LINE) ? 0 : f;
+    var f = clamp(share, 0, FULL_MAX);
+    p.base = 0;                 /* 每天重置，不再结转 */
     finals.push(f);
   });
 
@@ -1794,7 +1793,17 @@ function settleDay(date) {
     : 0;
   rec.final = f;
 
-  applyExp(bandOf(f).delta);
+  if (f < RESET_LINE) {
+    /* 连续低于 60：第 1 天 −5，第 2 天 −6……封顶 −10 */
+    state.lowStreak++;
+    var pen = lowPenaltyFor(state.lowStreak);
+    applyExp(-pen);
+    rec.lowPenalty = pen;
+  } else {
+    state.lowStreak = 0;
+    state.sick = false;
+    applyExp(bandOf(f).delta);
+  }
 
   /* 整天没打睡觉卡 */
   if (!rec.sleep) applyExp(-SLEEP_MISS_EXP);
@@ -1806,15 +1815,8 @@ function settleDay(date) {
     rec.earlyBonus = earlyB;
   }
 
-  if (f < RESET_LINE) {
-    state.lowStreak++;
-  } else {
-    state.lowStreak = 0;
-    state.sick = false;
-  }
-
+  /* 生病只是外观，不再额外扣分 */
   if (state.lowStreak >= SICK_AFTER) state.sick = true;
-  if (state.sick) applyExp(-SICK_PENALTY);
 
   convertExp();
 
@@ -1979,15 +1981,14 @@ function renderPet() {
     : '未打卡';
   $('#tStreak').textContent = computeStreak();
 
-  var dlt = band.delta;
+  var dlt = (f < RESET_LINE)
+    ? -lowPenaltyFor(state.lowStreak + 1)
+    : band.delta;
   var dTxt = dlt > 0 ? '+' + dlt : (dlt === 0 ? '±0' : String(dlt));
-  var carryTxt = '';
-  if (p.base < 0) carryTxt = ' ｜ 昨天没吃够，今天从 ' + p.base + ' 开始';
-  else if (p.base > 0) carryTxt = ' ｜ 接着昨天的 ' + p.base + ' 算';
   var earlyNow = rec.sleep ? earlyBonusOf(f, rec.sleep) : 0;
-  $('#todayNote').textContent = (rec.sleep
+  $('#todayNote').textContent = rec.sleep
     ? '饱食度 ' + f + ' → 今晚结算 ' + dTxt + ' 经验' + (earlyNow ? '，早睡再 +' + earlyNow : '')
-    : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡') + carryTxt;
+    : '当前饱食度 ' + f + ' → 预计 ' + dTxt + ' 经验，别忘了睡觉打卡';
 
   if (Date.now() > bubbleLock) {
     $('#bubble').textContent = idleBubble(mood);
