@@ -1600,8 +1600,17 @@ function dailyShare() {
   return (campusScore(rec) + extraScore(rec)) / n;
 }
 
+/* 结转规则：
+   - 昨天是负数 → 今天继续背这个欠账（-20 + 80 = 60）
+   - 昨天是正数 → 只当"下限"，今天做得多就按实际得分算，不叠加
+     例：昨天 55，今天做满 80 → 显示 80，而不是 135 封顶 100 */
+function applyCarry(base, share) {
+  if (base < 0) return clamp(base + share, FULL_MIN, FULL_MAX);
+  return clamp(Math.max(base, share), 0, FULL_MAX);
+}
+
 function liveFullnessOf(p) {
-  return clamp(p.base + dailyShare(), FULL_MIN, FULL_MAX);
+  return applyCarry(p.base, dailyShare());
 }
 
 function liveFullness() {
@@ -1775,7 +1784,7 @@ function settleDay(date) {
   var finals = [];
 
   state.pets.forEach(function (p) {
-    var f = clamp(p.base + share, FULL_MIN, FULL_MAX);
+    var f = applyCarry(p.base, share);
     p.base = (f >= RESET_LINE) ? 0 : f;
     finals.push(f);
   });
