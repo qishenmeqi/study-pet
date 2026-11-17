@@ -498,6 +498,11 @@
   .log-list li:last-child{ border-bottom:0; }
   .log-list .r-name{ font-weight:600; }
   .log-list .r-time{ color:var(--ink-3); font-size:12px; font-weight:600; }
+  .log-list .r-name{ flex:1; min-width:0; word-break:break-word; line-height:1.45; }
+  .chg{ font-size:12px; font-weight:700; white-space:nowrap; margin-left:8px; }
+  .chg.pos{ color:#2E9E63; }
+  .chg.neg{ color:#D9534F; }
+  .chg.zero{ color:var(--ink-3); }
   .empty{ text-align:center; color:var(--ink-3); padding:20px 0; font-size:14px; }
 
   /* ---------- 成绩 ---------- */
@@ -932,6 +937,12 @@
           <h2 class="card-title">兑换记录</h2>
           <ul class="log-list" id="redeemList"></ul>
         </div>
+
+        <div class="card">
+          <h2 class="card-title">最近变动</h2>
+          <p class="hint" style="margin-top:0">经验、积分、宠物成长的每一次变化都会记在这里。</p>
+          <ul class="log-list" id="changeList"></ul>
+        </div>
       </div>
     </section>
 
@@ -1177,6 +1188,7 @@ function makeState() {
     petIndex: 0,
     eggBought: 1,
     growthFixVersion: 0,
+    changeLog: [],
     exp: 0,
     credits: 0,
     lowStreak: 0,
@@ -1215,6 +1227,7 @@ function load() {
         petIndex: s.petIndex || 0,
         eggBought: typeof s.eggBought === 'number' ? s.eggBought : 1,
         growthFixVersion: s.growthFixVersion || (s.growthFixed ? 1 : 0),
+        changeLog: Array.isArray(s.changeLog) ? s.changeLog : [],
         exp: typeof s.exp === 'number' ? s.exp : 0,
         credits: typeof s.credits === 'number' ? s.credits : 0,
         lowStreak: s.lowStreak || 0,
@@ -1331,8 +1344,8 @@ function buyEgg() {
   var costTxt = price.exp ? (price.exp + ' 点经验') : (price.credits + ' 积分');
   if (!confirm('花 ' + costTxt + ' 买一颗新蛋？')) return;
 
-  if (price.exp) state.exp -= price.exp;
-  else state.credits -= price.credits;
+  if (price.exp) { state.exp -= price.exp; logChange('exp', -price.exp, '买新蛋'); }
+  else { state.credits -= price.credits; logChange('credit', -price.credits, '买新蛋'); }
 
   state.eggBought++;
   state.pets.push(newPet({ first: false }));
@@ -1352,6 +1365,7 @@ function recyclePet() {
   if (!confirm('回收「' + (p.name || '宠物') + '」？会退回 ' + RECYCLE_CREDITS + ' 积分。')) return;
 
   state.credits += RECYCLE_CREDITS;
+  logChange('credit', RECYCLE_CREDITS, '回收宠物');
   state.pets.splice(state.petIndex, 1);
 
   var all = loadAllImages();
@@ -1659,9 +1673,11 @@ function advanceStage(p) {
 
     p.stage = 'juvenile';
     p.growth = 0;
+    logChange('growth', 0, (p.name || '宠物') + ' 孵化为幼体');
   } else if (p.stage === 'juvenile') {
     p.stage = 'adult';
     p.growth = 0;
+    logChange('growth', 0, (p.name || '宠物') + ' 长大成体');
   }
 }
 
@@ -1720,6 +1736,28 @@ function computeStreak() {
 /* =========================================================
    经验 / 积分
    ========================================================= */
+function nowStamp() {
+  var d = new Date();
+  return (d.getMonth() + 1) + '-' + pad2(d.getDate()) + ' ' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+}
+
+function logChange(kind, delta, reason) {
+  if (!state.changeLog) state.changeLog = [];
+  state.changeLog.unshift({ at: nowStamp(), kind: kind, delta: delta, reason: reason });
+  if (state.changeLog.length > 200) state.changeLog.length = 200;
+}
+
+/* 加减经验，并把实际变化记进变动记录 */
+function spendExp(n, reason) {
+  var e0 = state.exp, c0 = state.credits;
+  applyExp(n);
+  var de = state.exp - e0;
+  var dc = state.credits - c0;
+  if (de) logChange('exp', de, reason);
+  if (dc) logChange('credit', dc, reason + '（经验不够，用积分抵）');
+  return de;
+}
+
 function applyExp(n) {
   if (n >= 0) { state.exp += n; return 0; }
   var need = -n;
@@ -1797,28 +1835,30 @@ function settleDay(date) {
     /* 连续低于 60：第 1 天 −5，第 2 天 −6……封顶 −10 */
     state.lowStreak++;
     var pen = lowPenaltyFor(state.lowStreak);
-    applyExp(-pen);
+    spendExp(-pen, '饱食度 ' + Math.round(f) + ' 低于 60（连续第 ' + state.lowStreak + ' 天）');
     rec.lowPenalty = pen;
   } else {
     state.lowStreak = 0;
     state.sick = false;
-    applyExp(bandOf(f).delta);
+    var bandD = bandOf(f).delta;
+    if (bandD) spendExp(bandD, '饱食度 ' + Math.round(f) + ' 区间奖励');
   }
 
   /* 整天没打睡觉卡 */
-  if (!rec.sleep) applyExp(-SLEEP_MISS_EXP);
+  if (!rec.sleep) spendExp(-SLEEP_MISS_EXP, '没打睡觉卡');
 
   /* 早睡奖励 */
   var earlyB = earlyBonusOf(f, rec.sleep);
   if (earlyB) {
-    applyExp(earlyB);
+    spendExp(earlyB, '早睡奖励');
     rec.earlyBonus = earlyB;
   }
 
   /* 生病只是外观，不再额外扣分 */
   if (state.lowStreak >= SICK_AFTER) state.sick = true;
 
-  convertExp();
+  var gained = convertExp();
+  if (gained) logChange('credit', gained, '经验满 100 兑换');
 
   /* 连续打卡奖励：达到 3 天给一次，断签后可再得 */
   var st = streakEndingAt(date);
@@ -1826,6 +1866,7 @@ function settleDay(date) {
     state.streakRewarded = false;
   } else if (st >= STREAK_BONUS_AT && !state.streakRewarded) {
     state.credits += STREAK_BONUS_CREDITS;
+    logChange('credit', STREAK_BONUS_CREDITS, '连续打卡 ' + STREAK_BONUS_AT + ' 天奖励');
     state.streakRewarded = true;
     rec.streakBonus = STREAK_BONUS_CREDITS;
 
@@ -1843,7 +1884,9 @@ function settleDay(date) {
   /* 每只宠物各自成长：第一只按作业全完成，其它按饱食度 ≥60 */
   state.pets.forEach(function (p, i) {
     var ok = p.first ? dayCheckedIn(date) : (finals[i] >= RESET_LINE);
+    var before = p.growth;
     p.growth = ok ? p.growth + 1 : 0;
+    if (!ok && before > 0) logChange('growth', -before, (p.name || '宠物') + ' 当天没达到条件，成长清零');
     advanceStage(p);
   });
 }
@@ -2555,6 +2598,7 @@ function redeemGrade(g) {
     var d = new Date();
     g.redeemedAt = (d.getMonth() + 1) + '月' + d.getDate() + '日';
     state.credits += val;
+    logChange('credit', val, '成绩奖励：' + g.name + ' ' + g.score + ' 分');
     state.redemptions.unshift({
       id: 'gr' + Date.now().toString(36),
       name: '成绩奖励 · ' + g.name + ' ' + g.score + '分',
@@ -2621,6 +2665,42 @@ function toggleTask(kind, id) {
 /* =========================================================
    渲染：奖励
    ========================================================= */
+function renderChangeLog() {
+  var list = $('#changeList');
+  if (!list) return;
+  list.innerHTML = '';
+
+  var log = state.changeLog || [];
+  if (!log.length) {
+    var e = document.createElement('li');
+    e.className = 'empty';
+    e.textContent = '还没有记录';
+    list.appendChild(e);
+    return;
+  }
+
+  log.slice(0, 40).forEach(function (c) {
+    var li = document.createElement('li');
+
+    var left = document.createElement('span');
+    left.className = 'r-name';
+    left.textContent = c.at + ' · ' + c.reason;
+
+    var right = document.createElement('span');
+    var cls = c.delta > 0 ? 'pos' : (c.delta < 0 ? 'neg' : 'zero');
+    right.className = 'chg ' + cls;
+
+    var prefix = c.kind === 'exp' ? '经验 ' : (c.kind === 'credit' ? '积分 ' : '成长 ');
+    if (c.delta > 0) right.textContent = prefix + '+' + c.delta;
+    else if (c.delta < 0) right.textContent = prefix + c.delta;
+    else right.textContent = prefix + '归零';
+
+    li.appendChild(left);
+    li.appendChild(right);
+    list.appendChild(li);
+  });
+}
+
 function renderReward() {
   $('#balanceNum').textContent = state.credits;
 
@@ -2734,6 +2814,7 @@ function redeem(reward, cost, label) {
 
   function doIt() {
     state.credits -= cost;
+    logChange('credit', -cost, '兑换奖励：' + label);
     var d = new Date();
     state.redemptions.unshift({
       id: 'rd' + Date.now().toString(36),
@@ -2814,6 +2895,7 @@ function render() {
   renderExtra();
   renderGrades();
   renderReward();
+  renderChangeLog();
   renderSettings();
 }
 
@@ -2937,13 +3019,13 @@ function bindEvents() {
     var overnight = target !== todayKey();
     var rec = dayRec(target);
 
-    if (rec.sleep) { toast('这一觉已经打过卡了'); return; }
+    if (rec.sleep) { toast(overnight ? '昨晚已经打过卡了，今晚再来' : '这一觉已经打过卡了'); return; }
 
     var hm = nowHM();
 
     if (overnight) {
       rec.sleep = { time: hm, late: false, overnight: true };
-      applyExp(-SLEEP_LATE_EXP);
+      spendExp(-SLEEP_LATE_EXP, '凌晨补卡');
       save();
       render();
       toast('已经过了 0 点，算补昨晚的卡，扣 ' + SLEEP_LATE_EXP + ' 点经验');
@@ -2953,7 +3035,7 @@ function bindEvents() {
 
     var late = hm > (state.settings.bedtime || '23:30');
     rec.sleep = { time: hm, late: late, overnight: false };
-    if (late) applyExp(-SLEEP_LATE_EXP);
+    if (late) spendExp(-SLEEP_LATE_EXP, '睡觉打卡迟到');
     save();
     render();
 
